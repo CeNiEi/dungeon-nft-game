@@ -70,6 +70,33 @@ pub mod dungeon_nft {
 
     use super::*;
 
+    pub fn pull_back(ctx: Context<PullBackInstruction>, application_idx: u64) -> Result<()> {
+        let current_stage = Stage::from(ctx.accounts.application_state.stage)?;
+        let is_valid_stage = current_stage == Stage::FundsDeposited || current_stage == Stage::PullBackComplete;
+        if !is_valid_stage {
+            msg!("Stage is invalid, state stage is {}", ctx.accounts.application_state.stage);
+            return Err(ErrorCode::StageInvalid.into());
+        }
+
+        let wallet_amount = ctx.accounts.escrow_wallet_state.amount;
+        transfer_escrow_out(
+            ctx.accounts.sender.to_account_info(),
+            ctx.accounts.receiver.to_account_info(),
+            ctx.accounts.mint_of_token_being_sent.to_account_info(),
+            &mut ctx.accounts.escrow_wallet_state,
+            application_idx,
+            ctx.accounts.application_state.to_account_info(),
+            ctx.accounts.application_state.state_bump,
+            ctx.accounts.token_program.to_account_info(),
+            ctx.accounts.refund_wallet.to_account_info(),
+            wallet_amount,
+        )?;
+        let state = &mut ctx.accounts.application_state;
+        state.stage = Stage::PullBackComplete.to_code();
+
+        Ok(())
+    }
+
     pub fn complete_grant(ctx: Context<CompleteGrant>, application_idx: u64) -> Result<()> {
         if Stage::from(ctx.accounts.application_state.stage)? != Stage::FundsDeposited {
             msg!("Stage is invalid, state stage is {}", ctx.accounts.application_state.stage);
@@ -93,8 +120,6 @@ pub mod dungeon_nft {
         state.stage = Stage::EscrowComplete.to_code();
         Ok(())
     }
-
- 
 
     pub fn initialize_new_grant(ctx: Context<InitializeNewGrant>, application_idx: u64, amount: u64) -> Result<()> {
         let state = &mut ctx.accounts.application_state;
@@ -307,9 +332,52 @@ pub struct CompleteGrant<'info> {
     rent: Sysvar<'info, Rent>,
 }
 
-
 #[derive(Accounts)]
-pub struct Initialize {}
+#[instruction(application_idx: u64)]
+pub struct PullBackInstruction<'info> {
+    #[account(
+        mut,
+        seeds=[
+            b"application-state".as_ref(), 
+            sender.key().as_ref(),
+            receiver.key.as_ref(), 
+            mint_of_token_being_sent.key().as_ref(), 
+            application_idx.to_le_bytes().as_ref()],
+        bump = application_state.state_bump,
+        has_one = sender,
+        has_one = receiver,
+        has_one = mint_of_token_being_sent,
+    )]
+    application_state: Account<'info, State>,
+    #[account(
+        mut,
+        seeds=[
+            b"escrow-wallet-state".as_ref(), 
+            sender.key().as_ref(), 
+            receiver.key.as_ref(), 
+            mint_of_token_being_sent.key().as_ref(), 
+            application_idx.to_le_bytes().as_ref()],
+        bump = application_state.wallet_bump,
+    )]
+    escrow_wallet_state: Account<'info, TokenAccount>,    
+
+    #[account(mut)]
+    sender: Signer<'info>,
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    receiver: AccountInfo<'info>,
+    mint_of_token_being_sent: Account<'info, Mint>,
+
+    system_program: Program<'info, System>,
+    token_program: Program<'info, Token>,
+    rent: Sysvar<'info, Rent>,
+
+    #[account(
+        mut,
+        constraint=refund_wallet.owner == sender.key(),
+        constraint=refund_wallet.mint == mint_of_token_being_sent.key()
+    )]
+    refund_wallet: Account<'info, TokenAccount>,
+}
 
 #[error_code]
 pub enum ErrorCode {

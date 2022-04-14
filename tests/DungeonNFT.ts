@@ -175,7 +175,6 @@ describe("DungeonNFT", () => {
 
     const amount = new anchor.BN(20000000);
 
-    // Initialize mint account and fund the account
     const tx1 = await program.methods.initializeNewGrant(pda.idx, amount).accounts({
       applicationState: pda.stateKey,
       escrowWalletState: pda.escrowWalletKey,
@@ -203,16 +202,16 @@ describe("DungeonNFT", () => {
     )
 
     const tx2 = await program.methods.completeGrant(pda.idx).accounts({
-      applicationState: pda.stateKey, 
-      escrowWalletState: pda.escrowWalletKey, 
-      mintOfTokenBeingSent: mintAddress, 
-      sender: sender.publicKey, 
-      receiver: receiver.publicKey, 
+      applicationState: pda.stateKey,
+      escrowWalletState: pda.escrowWalletKey,
+      mintOfTokenBeingSent: mintAddress,
+      sender: sender.publicKey,
+      receiver: receiver.publicKey,
       walletToDepositTo: receiverTokenAccount,
 
-      systemProgram: anchor.web3.SystemProgram.programId, 
-      rent: anchor.web3.SYSVAR_RENT_PUBKEY, 
-      tokenProgram: spl.TOKEN_PROGRAM_ID, 
+      systemProgram: anchor.web3.SystemProgram.programId,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      tokenProgram: spl.TOKEN_PROGRAM_ID,
       associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID
     }).signers([receiver]).rpc();
 
@@ -225,6 +224,64 @@ describe("DungeonNFT", () => {
     } catch (e) {
       assert.equal(e.message, "Cannot read properties of null (reading 'data')");
     }
+  });
+
+  it('can pull back funds once they are deposited', async () => {
+    const [, senderBalancePre] = await readAccount(senderWallet, provider);
+    assert.equal(senderBalancePre, '1337000000');
+
+    const amount = new anchor.BN(20000000);
+
+    const tx1 = await program.methods.initializeNewGrant(pda.idx, amount).accounts({
+      applicationState: pda.stateKey,
+      escrowWalletState: pda.escrowWalletKey,
+      mintOfTokenBeingSent: mintAddress,
+      sender: sender.publicKey,
+      receiver: receiver.publicKey,
+      walletToWithdrawFrom: senderWallet,
+
+      systemProgram: anchor.web3.SystemProgram.programId,
+      tokenProgram: spl.TOKEN_PROGRAM_ID,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY
+    }).signers([sender]).rpc();
+
+    console.log(`Initialized a new Safe Pay instance. Sender will pay receiver 20 tokens`);
+
+    const [, senderBalancePost] = await readAccount(senderWallet, provider);
+    assert.equal(senderBalancePost, '1317000000');
+    const [, escrowBalancePost] = await readAccount(pda.escrowWalletKey, provider);
+    assert.equal(escrowBalancePost, '20000000');
+
+    const tx2 = await program.methods.pullBack(pda.idx).accounts({
+      applicationState: pda.stateKey, 
+      escrowWalletState: pda.escrowWalletKey, 
+      mintOfTokenBeingSent: mintAddress, 
+      sender: sender.publicKey, 
+      receiver: receiver.publicKey, 
+      refundWallet: senderWallet,
+
+      systemProgram: anchor.web3.SystemProgram.programId, 
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY, 
+      tokenProgram: spl.TOKEN_PROGRAM_ID
+    }).signers([sender]).rpc();
+      
+    // Assert that 20 tokens were sent back.
+    const [, senderBalanceRefund] = await readAccount(senderWallet, provider);
+    assert.equal(senderBalanceRefund, '1337000000');
+
+    // Assert that escrow was correctly closed.
+    try {
+      await readAccount(pda.escrowWalletKey, provider);
+      return assert.fail("Account should be closed");
+    } catch (e) {
+      assert.equal(e.message, "Cannot read properties of null (reading 'data')");
+    }
+
+    const state = await program.account.state.fetch(pda.stateKey);
+    assert.equal(state.amountOfTokens.toString(), '20000000');
+    assert.equal(state.stage.toString(), '3');
+
   })
+
 
 });
