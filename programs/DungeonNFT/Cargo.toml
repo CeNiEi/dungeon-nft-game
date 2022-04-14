@@ -19,5 +19,5 @@ default = []
 overflow-checks = true
 
 [dependencies]
-anchor-lang = "0.24.0"
-anchor-spl  = "0.24.0"
+anchor-lang = { version = "0.24.0", features = ["init-if-needed"] }
+anchor-spl = "0.24.0"
