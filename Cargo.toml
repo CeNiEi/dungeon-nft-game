@@ -1,5 +1,5 @@
 [workspace]
 members = [
     "programs/*",
-    "app/my_game"
+    "app/yet_another_dungeon_crawler"
 ]

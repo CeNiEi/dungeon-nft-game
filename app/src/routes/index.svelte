@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	//import init, { game_starter } from 'my_game';
-    import init, {game_starter} from 'my_game';
+	//@ts-ignore
+	import init, { game_starter } from 'yet_another_dungeon_crawler';
 
 	function loadWASM() {
 		var canvas = document.createElement('canvas');
@@ -11,9 +11,8 @@
 		canvas.height = 480;
 		document.body.appendChild(canvas);
 
-		init('http://0.0.0.0:3000/assets/my_game_bg.wasm').then(() => {
+		init('http://0.0.0.0:3000/assets/yet_another_dungeon_crawler_bg.wasm').then(() => {
 			console.log('init wasm-pack');
-            game_starter();
 		});
 	}
 

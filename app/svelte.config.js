@@ -12,7 +12,7 @@ const config = {
 		adapter: adapter(),
 
 		vite: () => ({
-			plugins: [wasmPack(['./my_game'], [])],
+			plugins: [wasmPack(['./yet_another_dungeon_crawler'], [])],
 			//optimizeDeps: {
 			//	exclude: ['./my_game']
 			//}
