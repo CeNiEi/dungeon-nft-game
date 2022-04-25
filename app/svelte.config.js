@@ -13,9 +13,15 @@ const config = {
 
 		vite: () => ({
 			plugins: [wasmPack(['./yet_another_dungeon_crawler'], [])],
-			//optimizeDeps: {
+
+			define: {
+				'process.env.BROWSER': true
+			}, 
+
+			optimizeDeps: {
+				include: ['@project-serum/anchor']
 			//	exclude: ['./my_game']
-			//}
+			}
 
 		})
 	}

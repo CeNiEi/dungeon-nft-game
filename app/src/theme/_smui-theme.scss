@@ -1,0 +1,120 @@
+@use 'sass:color';
+
+@use '@material/theme/color-palette';
+
+// Svelte Colors!
+@use '@material/theme/index'as theme with ($primary: #7ceaa4,
+  $secondary: #3b3d54,
+  $surface: #fff,
+  $background: #fff,
+  $error: color-palette.$red-900);
+
+@import 'https://fonts.googleapis.com/css?family=Playfair+Display:400,700i,900i';
+
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Playfair Display', serif;
+  color: rgba(172, 170, 190, 1);
+  text-rendering: optimizeLegibility;
+  //font-smooth: always;
+  //-webkit-font-smoothing: antialiased;
+  //-moz-osx-font-smoothing: grayscale;
+  background-color: theme.$secondary;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.wrap {
+  perspective-origin: 50% 50%;
+}
+
+.svg {
+  stroke: theme.$primary;
+  position: absolute;
+  bottom: -100vh;
+  transform-style: preserve-3d;
+}
+
+$total: 10;
+
+@for $i from 1 through $total {
+  $scale: random(2) - .4;
+
+  .svg:nth-child(#{$i}) {
+    left: random(120) * 1% - 20;
+    animation: raise#{$i} 6+random(15)+s linear infinite;
+    animation-delay: random(5) - 5 + s;
+    transform: scale(.3 * $i - .6) rotate(random(360) + deg);
+    z-index: $i - 7;
+    filter: blur($i - 6 + px);
+
+    @keyframes raise#{$i} {
+      to {
+        bottom: 150vh;
+        transform: scale(.3 * $i - .6) rotate(random(360) + deg);
+      }
+    }
+  }
+}
+
+.button {
+  align-items: center;
+  background-color: #fee6e3;
+  border: 2px solid #111;
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: #111;
+  cursor: pointer;
+  display: flex;
+  font-family: Inter, sans-serif;
+  font-size: 16px;
+  height: 48px;
+  justify-content: center;
+  line-height: 24px;
+  max-width: 100%;
+  padding: 0 25px;
+  position: relative;
+  text-align: center;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+
+  &:after {
+    background-color: #111;
+    border-radius: 8px;
+    content: '';
+    display: block;
+    height: 48px;
+    left: 0;
+    width: 100%;
+    position: absolute;
+    top: -2px;
+    transform: translate(8px, 8px);
+    transition: transform 0.2s ease-out;
+    z-index: -1;
+  }
+
+  &:hover {
+    &:after {
+      transform: translate(0, 0);
+    }
+
+    outline: 0;
+  }
+
+  &:active {
+    background-color: #ffdeda;
+    outline: 0;
+  }
+}
+
+@media (min-width: 768px) {
+  .button {
+    padding: 0 40px;
+  }
+}
