@@ -24,8 +24,8 @@
 <WalletProvider {localStorageKey} {wallets} autoConnect />
 <AnchorConnectionProvider {network} {idl} />
 
-<div class="wrap">
-	<svg class="svg" xmlns="http://www.w3.org/2000/svg">
+<div class="nftwrap">
+	<svg class="nftsvg" xmlns="http://www.w3.org/2000/svg">
 		<path
 			fill="none"
 			stroke-width="1"
@@ -83,7 +83,7 @@
 		/>
 	</svg>
 
-	<svg class="svg" xmlns="http://www.w3.org/2000/svg">
+	<svg class="nftsvg" xmlns="http://www.w3.org/2000/svg">
 		<path
 			fill="none"
 			stroke-width="1"
@@ -141,7 +141,7 @@
 		/>
 	</svg>
 
-	<svg class="svg" xmlns="http://www.w3.org/2000/svg">
+	<svg class="nftsvg" xmlns="http://www.w3.org/2000/svg">
 		<path
 			fill="none"
 			stroke-width="1"
@@ -198,7 +198,7 @@
              1.19,21.68 1.56,21.79 1.94,21.79 Z"
 		/>
 	</svg>
-	<svg class="svg" xmlns="http://www.w3.org/2000/svg">
+	<svg class="nftsvg" xmlns="http://www.w3.org/2000/svg">
 		<path
 			fill="none"
 			stroke-width="1"
@@ -255,7 +255,7 @@
              1.19,21.68 1.56,21.79 1.94,21.79 Z"
 		/>
 	</svg>
-	<svg class="svg" xmlns="http://www.w3.org/2000/svg">
+	<svg class="nftsvg" xmlns="http://www.w3.org/2000/svg">
 		<path
 			fill="none"
 			stroke-width="1"
@@ -312,7 +312,7 @@
              1.19,21.68 1.56,21.79 1.94,21.79 Z"
 		/>
 	</svg>
-	<svg class="svg" xmlns="http://www.w3.org/2000/svg">
+	<svg class="nftsvg" xmlns="http://www.w3.org/2000/svg">
 		<path
 			fill="none"
 			stroke-width="1"
@@ -369,7 +369,7 @@
              1.19,21.68 1.56,21.79 1.94,21.79 Z"
 		/>
 	</svg>
-	<svg class="svg" xmlns="http://www.w3.org/2000/svg">
+	<svg class="nftsvg" xmlns="http://www.w3.org/2000/svg">
 		<path
 			fill="none"
 			stroke-width="1"
@@ -426,7 +426,7 @@
              1.19,21.68 1.56,21.79 1.94,21.79 Z"
 		/>
 	</svg>
-	<svg class="svg" xmlns="http://www.w3.org/2000/svg">
+	<svg class="nftsvg" xmlns="http://www.w3.org/2000/svg">
 		<path
 			fill="none"
 			stroke-width="1"
@@ -483,7 +483,7 @@
              1.19,21.68 1.56,21.79 1.94,21.79 Z"
 		/>
 	</svg>
-	<svg class="svg" xmlns="http://www.w3.org/2000/svg">
+	<svg class="nftsvg" xmlns="http://www.w3.org/2000/svg">
 		<path
 			fill="none"
 			stroke-width="1"
@@ -541,7 +541,7 @@
 		/>
 	</svg>
 
-	<svg class="svg" xmlns="http://www.w3.org/2000/svg">
+	<svg class="nftsvg" xmlns="http://www.w3.org/2000/svg">
 		<path
 			fill="none"
 			stroke-width="1"

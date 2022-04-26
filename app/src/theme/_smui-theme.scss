@@ -17,10 +17,8 @@
 }
 
 
-
 body {
   background: rgba(20, 5, 5, 1);
-  height: 100vh;
   overflow: hidden;
   display: flex;
   justify-content: center;
@@ -28,23 +26,21 @@ body {
   perspective: 800px;
 }
 
-.wrap {
+.nftwrap {
   perspective-origin: 50% 50%;
 }
 
-.svg {
+.nftsvg {
   stroke: theme.$primary;
   position: absolute;
-  bottom: -100vh;
+  bottom: -200vh;
   transform-style: preserve-3d;
 }
 
-$total: 10;
-
-@for $i from 1 through $total {
+@for $i from 1 through 15 {
   $scale: random(2) - .4;
 
-  .svg:nth-child(#{$i}) {
+  .nftsvg:nth-child(#{$i}) {
     left: random(120) * 1% - 20;
     animation: raise#{$i} 6+random(15)+s linear infinite;
     animation-delay: random(5) - 5 + s;

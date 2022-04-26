@@ -57,7 +57,7 @@
 			line-height: $fontSize;
             opacity: 0;
 			font-family: Anton, sans-serif;
-			transform: translate(-50%, -80%);
+			transform: translate(-50%, -20%);
             mix-blend-mode: screen;
 
 			@for $i from 0 through 100 {
@@ -84,22 +84,22 @@
 						$initDepth: random(3000) - 2500;
 						0% {
 							opacity: 0;
-							transform: translate(-50%, -80%) rotateX(#{$initX}deg) rotateY(#{$initY}deg)
+							transform: translate(-50%, 20%) rotateX(#{$initX}deg) rotateY(#{$initY}deg)
 								rotateZ(#{$initZ}deg) translateZ(#{$initDepth}px);
 						}
 						10% {
 							opacity: 0;
-							transform: translate(-50%, -80%) rotateX(#{$initX}deg) rotateY(#{$initY}deg)
+							transform: translate(-50%, 20%) rotateX(#{$initX}deg) rotateY(#{$initY}deg)
 								rotateZ(#{$initZ}deg) translateZ(#{$initDepth}px);
 						}
 						90% {
 							opacity: 1;
-							transform: translate(-50%, -80%) rotate(0deg) rotateY(0deg) rotateZ(0deg)
+							transform: translate(-50%, 20%) rotate(0deg) rotateY(0deg) rotateZ(0deg)
 								translateZ(0px);
 						}
 						100% {
 							opacity: 1;
-							transform: translate(-50%, -80%) rotate(0deg) rotateY(0deg) rotateZ(0deg)
+							transform: translate(-50%, 20%) rotate(0deg) rotateY(0deg) rotateZ(0deg)
 								translateZ(0px);
 						}
 					}
