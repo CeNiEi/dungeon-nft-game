@@ -20,10 +20,8 @@
 body {
   background: rgba(20, 5, 5, 1);
   overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   perspective: 800px;
+  height: 100vh;
 }
 
 .nftwrap {

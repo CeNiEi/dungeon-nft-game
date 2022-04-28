@@ -1,30 +1,23 @@
 <script lang="ts">
-	import Title from '../components/Title.svelte';
-	import Button from '../components/Button.svelte';
+	import NftTitle from '../components/NftTitle.svelte';
+	import NftButton from '../components/NftButton.svelte';
 	import { goto } from '$app/navigation';
 
 	const goToInstructions = () => {
+		console.log("reached");
 		goto('game');
-	}
-
+	};
 </script>
 
-<Title />
+<NftTitle />
 <div class="container">
-	<Button clickHandler={goToInstructions} />	
+	<NftButton/>
 </div>
 
 <style lang="scss">
 	.container {
-		position: absolute;
-
-		-moz-transform: translate(-50%, 600%);
-		-ms-transform: translate(-50%, 600%);
-		-webkit-transform: translate(-50%, 600%);
-		-o-transform: translate(-50%, 600%);
-		transform: translate(-50%, 600%);
-
 		animation: fadeIn 5000ms ease-in;
+		transform: translate(0, 550%);
 
 		@keyframes fadeIn {
 			0% {
