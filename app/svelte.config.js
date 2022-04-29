@@ -19,7 +19,7 @@ const config = {
 			}, 
 
 			optimizeDeps: {
-				include: ['@project-serum/anchor']
+				include: ['@solana/web3.js', '@project-serum/anchor']
 			//	exclude: ['./my_game']
 			}
 
