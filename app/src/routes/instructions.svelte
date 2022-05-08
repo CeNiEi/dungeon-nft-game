@@ -1,5 +1,11 @@
-<script>
+<script lang="ts">
+	import { goto } from '$app/navigation';
+
 	import NftButton from '../components/NftButton.svelte';
+
+	const goToGame = () => {
+		goto('game');
+	};
 </script>
 
 <div class="title">INSTRUCTIONS</div>
@@ -31,7 +37,7 @@
 	</div>
 </div>
 <div class="address">
-	<NftButton />
+	<NftButton clickHandler={goToGame} />
 </div>
 
 <style lang="scss">

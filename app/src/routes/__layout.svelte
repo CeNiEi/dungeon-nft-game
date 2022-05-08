@@ -2,13 +2,12 @@
 	import { onMount } from 'svelte';
 	import { WalletProvider } from '@svelte-on-solana/wallet-adapter-ui';
 	import { AnchorConnectionProvider } from '@svelte-on-solana/wallet-adapter-anchor';
-	//import { clusterApiUrl } from '@solana/web3.js';
+	import { clusterApiUrl } from '@solana/web3.js';
 	import idl from '../../../target/idl/dungeon_nft.json';
 	import type { Adapter } from '@solana/wallet-adapter-base';
 
 	const localStorageKey = 'walletAdapter';
-	//const network = clusterApiUrl('devnet');
-	const network = 'http://127.0.0.1:8899';
+  const network = clusterApiUrl('devnet');
 
 	let wallets: Adapter[];
 

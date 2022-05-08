@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
+import { element } from 'svelte/internal';
 	//@ts-ignore
 	import init, { game_starter } from 'yet_another_dungeon_crawler';
 
+
 	function loadWASM() {
 		var canvas = document.createElement('canvas');
-		console.log(canvas.id);
 		canvas.id = 'canvas';
 		canvas.width = 640;
 		canvas.height = 480;
@@ -16,8 +17,17 @@
 		});
 	}
 
+	function cleanUpWASM() {
+		const canvas = document.getElementById('canvas');
+		canvas?.remove();
+	}
+
 	onMount(() => {
 		loadWASM();
 	});
+
+	onDestroy(() => {
+		cleanUpWASM();
+	})
 </script>
 

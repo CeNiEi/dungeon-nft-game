@@ -1,180 +1,11 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{token::{TokenAccount, Mint, Token}, associated_token::AssociatedToken};
+use anchor_spl::token::{Mint, Token, TokenAccount};
 
 declare_id!("5p3fWKASxACkTksYqPci3PAd2NKXmtwTRR1QyN7q6ogi");
 
-fn transfer_escrow_out<'info>(
-    sender: AccountInfo<'info>,
-    receiver: AccountInfo<'info>,
-    mint_of_token_being_sent: AccountInfo<'info>,
-    escrow_wallet: &mut Account<'info, TokenAccount>,
-    application_idx: u64,
-    state: AccountInfo<'info>,
-    state_bump: u8,
-    token_program: AccountInfo<'info>,
-    destination_wallet: AccountInfo<'info>,
-    amount: u64
-) -> Result<()> {
-
-    let bump_vector = state_bump.to_le_bytes();
-    let mint_of_token_being_sent_pk = mint_of_token_being_sent.key().clone();
-    let application_idx_bytes = application_idx.to_le_bytes();
-    let inner = vec![
-        b"application-state".as_ref(),
-        sender.key.as_ref(),
-        receiver.key.as_ref(),
-        mint_of_token_being_sent_pk.as_ref(), 
-        application_idx_bytes.as_ref(),
-        bump_vector.as_ref(),
-    ];
-    let outer = vec![inner.as_slice()];
-
-    let transfer_instruction = anchor_spl::token::Transfer{
-        from: escrow_wallet.to_account_info(),
-        to: destination_wallet,
-        authority: state.to_account_info(),
-    };
-    let cpi_ctx = CpiContext::new_with_signer(
-        token_program.to_account_info(),
-        transfer_instruction,
-        outer.as_slice(),
-    );
-    anchor_spl::token::transfer(cpi_ctx, amount)?;
-
-    let should_close = {
-        escrow_wallet.reload()?;
-        escrow_wallet.amount == 0
-    };
-
-    if should_close {
-        let ca = anchor_spl::token::CloseAccount{
-            account: escrow_wallet.to_account_info(),
-            destination: sender.to_account_info(),
-            authority: state.to_account_info(),
-        };
-        let cpi_ctx = CpiContext::new_with_signer(
-            token_program.to_account_info(),
-            ca,
-            outer.as_slice(),
-        );
-        anchor_spl::token::close_account(cpi_ctx)?;
-    }
-
-    Ok(())
-}
-
-
-#[program]
-pub mod dungeon_nft {
-    use anchor_spl::token::Transfer;
-
-    use super::*;
-
-    pub fn pull_back(ctx: Context<PullBackInstruction>, application_idx: u64) -> Result<()> {
-        let current_stage = Stage::from(ctx.accounts.application_state.stage)?;
-        let is_valid_stage = current_stage == Stage::FundsDeposited || current_stage == Stage::PullBackComplete;
-        if !is_valid_stage {
-            msg!("Stage is invalid, state stage is {}", ctx.accounts.application_state.stage);
-            return Err(ErrorCode::StageInvalid.into());
-        }
-
-        let wallet_amount = ctx.accounts.escrow_wallet_state.amount;
-        transfer_escrow_out(
-            ctx.accounts.sender.to_account_info(),
-            ctx.accounts.receiver.to_account_info(),
-            ctx.accounts.mint_of_token_being_sent.to_account_info(),
-            &mut ctx.accounts.escrow_wallet_state,
-            application_idx,
-            ctx.accounts.application_state.to_account_info(),
-            ctx.accounts.application_state.state_bump,
-            ctx.accounts.token_program.to_account_info(),
-            ctx.accounts.refund_wallet.to_account_info(),
-            wallet_amount,
-        )?;
-        let state = &mut ctx.accounts.application_state;
-        state.stage = Stage::PullBackComplete.to_code();
-
-        Ok(())
-    }
-
-    pub fn complete_grant(ctx: Context<CompleteGrant>, application_idx: u64) -> Result<()> {
-        if Stage::from(ctx.accounts.application_state.stage)? != Stage::FundsDeposited {
-            msg!("Stage is invalid, state stage is {}", ctx.accounts.application_state.stage);
-            return Err(ErrorCode::StageInvalid.into());
-        }
-
-        transfer_escrow_out(
-            ctx.accounts.sender.to_account_info(),
-            ctx.accounts.receiver.to_account_info(),
-            ctx.accounts.mint_of_token_being_sent.to_account_info(),
-            &mut ctx.accounts.escrow_wallet_state,
-            application_idx,
-            ctx.accounts.application_state.to_account_info(),
-            ctx.accounts.application_state.state_bump,
-            ctx.accounts.token_program.to_account_info(),
-            ctx.accounts.wallet_to_deposit_to.to_account_info(),
-            ctx.accounts.application_state.amount_of_tokens
-        )?;
-
-        let state = &mut ctx.accounts.application_state;
-        state.stage = Stage::EscrowComplete.to_code();
-        Ok(())
-    }
-
-    pub fn initialize_new_grant(ctx: Context<InitializeNewGrant>, application_idx: u64, amount: u64) -> Result<()> {
-        let state = &mut ctx.accounts.application_state;
-
-        state.idx = application_idx;
-        state.sender = ctx.accounts.sender.key().clone();
-        state.receiver = ctx.accounts.receiver.key().clone();
-        state.mint_of_token_being_sent = ctx.accounts.mint_of_token_being_sent.key().clone();
-        state.escrow_wallet = ctx.accounts.escrow_wallet_state.key().clone();
-        state.amount_of_tokens = amount;
-
-        let state_bump = *ctx.bumps.get("application_state").unwrap();
-        state.state_bump = state_bump;
-        state.wallet_bump = *ctx.bumps.get("escrow_wallet_state").unwrap();
-
-        msg!("Initialized new Safe Transfer instance for {}", amount);
-
-        let bump_vector = state_bump.to_le_bytes();
-        let mint_of_token_being_sent_pk = ctx.accounts.mint_of_token_being_sent.key().clone();
-        let application_idx_bytes = application_idx.to_le_bytes();
-
-        let inner = vec![
-            b"application-state".as_ref(), 
-            ctx.accounts.sender.key.as_ref(),
-            ctx.accounts.receiver.key.as_ref(), 
-            mint_of_token_being_sent_pk.as_ref(), 
-            application_idx_bytes.as_ref(), 
-            bump_vector.as_ref()
-        ];
-        let outer = vec![inner.as_slice()];
-
-        let transfer_instruction = Transfer {
-            from: ctx.accounts.wallet_to_withdraw_from.to_account_info(),
-            to: ctx.accounts.escrow_wallet_state.to_account_info(), 
-            authority: ctx.accounts.sender.to_account_info()
-        };
-
-        let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info(),
-            transfer_instruction, 
-            outer.as_slice()
-        );
-
-        anchor_spl::token::transfer(cpi_ctx, state.amount_of_tokens)?;
-
-        state.stage = Stage::FundsDeposited.to_code();
-
-        Ok(())
-    }
-
-
-}
-
 #[derive(Clone, Copy, PartialEq)]
 pub enum Stage {
+    Initialized,
     FundsDeposited,
     EscrowComplete,
     PullBackComplete,
@@ -183,17 +14,19 @@ pub enum Stage {
 impl Stage {
     fn to_code(&self) -> u8 {
         match self {
-            Stage::FundsDeposited => 1,
-            Stage::EscrowComplete => 2,
-            Stage::PullBackComplete => 3,
+            Stage::Initialized => 1,
+            Stage::FundsDeposited => 2,
+            Stage::EscrowComplete => 3,
+            Stage::PullBackComplete => 4,
         }
     }
 
     fn from(val: u8) -> std::result::Result<Stage, ProgramError> {
         match val {
-            1 => Ok(Stage::FundsDeposited),
-            2 => Ok(Stage::EscrowComplete),
-            3 => Ok(Stage::PullBackComplete),
+            1 => Ok(Stage::Initialized),
+            2 => Ok(Stage::FundsDeposited),
+            3 => Ok(Stage::EscrowComplete),
+            4 => Ok(Stage::PullBackComplete),
             unknown_value => {
                 msg!("Unknown stage: {}", unknown_value);
                 Err(error!(ErrorCode::StageInvalid).into())
@@ -202,185 +35,372 @@ impl Stage {
     }
 }
 
-
-
 #[account]
-pub struct State {
-    idx: u64,
-    sender: Pubkey,
-    receiver: Pubkey,
-    mint_of_token_being_sent: Pubkey,
-    escrow_wallet: Pubkey,
+pub struct TransactionState {
+    player: Pubkey,
+    beneficiary: Pubkey,
+    mint_of_token: Pubkey,
+    escrow_account: Pubkey,
     amount_of_tokens: u64,
     stage: u8,
     state_bump: u8,
-    wallet_bump: u8
+    escrow_bump: u8,
 }
 
-impl State {
-    const LEN: usize = 8 // Discriminator Length
-                + 8
-                + 32 
-                + 32
-                + 32
-                + 32
-                + 8 
-                + 1
-                + 1
-                + 1;
+impl TransactionState {
+    const LEN: usize = 32 + 32 + 32 + 32 + 8 + 1 + 1 + 1;
+}
+
+fn secure_transfer_cpi<'info>(
+    amount: u64,
+    sender_authority: AccountInfo<'info>,
+    sender_token_account: AccountInfo<'info>,
+    receiver_token_account: AccountInfo<'info>,
+    token_program: AccountInfo<'info>,
+    signer_seeds: &[&[&[u8]]],
+) -> Result<()> {
+    let secure_transfer_instruction = anchor_spl::token::Transfer {
+        from: sender_token_account,
+        to: receiver_token_account,
+        authority: sender_authority,
+    };
+
+    let secure_transfer_cpi_ctx =
+        CpiContext::new_with_signer(token_program, secure_transfer_instruction, signer_seeds);
+
+    anchor_spl::token::transfer(secure_transfer_cpi_ctx, amount)
+}
+
+#[program]
+pub mod dungeon_nft {
+    use super::*;
+
+    pub fn transaction_setup(ctx: Context<TransactionSetup>) -> Result<()> {
+        let state = &mut ctx.accounts.transaction_state;
+
+        state.player = ctx.accounts.player.key().clone();
+        state.beneficiary = ctx.accounts.beneficiary.key().clone();
+
+        state.mint_of_token = ctx.accounts.mint_of_token.key().clone();
+        state.escrow_account = ctx.accounts.escrow_account.key().clone();
+
+        state.amount_of_tokens = 0;
+
+        state.state_bump = *ctx.bumps.get("transaction_state").unwrap();
+        state.escrow_bump = *ctx.bumps.get("escrow_account").unwrap();
+
+        msg!("Initialized new Safe Transfer instance");
+
+        state.stage = Stage::Initialized.to_code();
+
+        Ok(())
+    }
+
+    pub fn deposit_by_both_parties(ctx: Context<DepositByBothParties>, amount: u64) -> Result<()> {
+        if Stage::from(ctx.accounts.transaction_state.stage)? != Stage::Initialized {
+            msg!(
+                "Stage is invalid, state stage is {}",
+                ctx.accounts.transaction_state.stage
+            );
+            return Err(ErrorCode::StageInvalid.into());
+        }
+
+        let mint_of_token_public_key = ctx.accounts.mint_of_token.key().clone();
+        let state_bump_bytes = ctx.accounts.transaction_state.state_bump.to_le_bytes();
+        let inner = vec![
+            b"transaction-state".as_ref(),
+            ctx.accounts.player.key.as_ref(),
+            ctx.accounts.beneficiary.key.as_ref(),
+            mint_of_token_public_key.as_ref(),
+            state_bump_bytes.as_ref(),
+        ];
+        let outer = vec![inner.as_slice()];
+
+        //for the player
+        secure_transfer_cpi(
+            amount,
+            ctx.accounts.player.to_account_info(),
+            ctx.accounts
+                .player_associated_token_account
+                .to_account_info(),
+            ctx.accounts.escrow_account.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
+            outer.as_ref(),
+        )?;
+
+        //for the beneficiary
+        secure_transfer_cpi(
+            amount,
+            ctx.accounts.beneficiary.to_account_info(),
+            ctx.accounts
+                .beneficiary_associated_token_account
+                .to_account_info(),
+            ctx.accounts.escrow_account.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
+            outer.as_ref(),
+        )?;
+
+        ctx.accounts.transaction_state.amount_of_tokens = amount;
+
+        msg!(
+            "Both Parties funded the escrow account with {} tokens",
+            amount
+        );
+
+        ctx.accounts.transaction_state.stage = Stage::FundsDeposited.to_code();
+
+        Ok(())
+    }
+
+    pub fn transfer_to_winner(ctx: Context<TransferToWinner>, _winner: Pubkey) -> Result<()> {
+        if Stage::from(ctx.accounts.transaction_state.stage)? != Stage::FundsDeposited {
+            msg!(
+                "Stage is invalid, state stage is {}",
+                ctx.accounts.transaction_state.stage
+            );
+            return Err(ErrorCode::StageInvalid.into());
+        }
+
+        let mint_of_token_public_key = ctx.accounts.mint_of_token.key().clone();
+        let state_bump_bytes = ctx.accounts.transaction_state.state_bump.to_le_bytes();
+        let inner = vec![
+            b"transaction-state".as_ref(),
+            ctx.accounts.player.key.as_ref(),
+            ctx.accounts.beneficiary.key.as_ref(),
+            mint_of_token_public_key.as_ref(),
+            state_bump_bytes.as_ref(),
+        ];
+        let outer = vec![inner.as_slice()];
+
+        secure_transfer_cpi(
+            2 * ctx.accounts.transaction_state.amount_of_tokens,
+            ctx.accounts.transaction_state.to_account_info(),
+            ctx.accounts.escrow_account.to_account_info(),
+            ctx.accounts
+                .winner_associated_token_account
+                .to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
+            outer.as_ref(),
+        )?;
+
+        ctx.accounts.escrow_account.reload()?;
+        assert!(ctx.accounts.escrow_account.amount == 0);
+
+     let close_escrow_account_instruction = anchor_spl::token::CloseAccount{
+            account: ctx.accounts.escrow_account.to_account_info(),
+            destination: ctx.accounts.player.to_account_info(),
+            authority: ctx.accounts.transaction_state.to_account_info(),
+        };
+        let close_escrow_account_cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            close_escrow_account_instruction,
+            outer.as_slice(),
+        );
+        anchor_spl::token::close_account(close_escrow_account_cpi_ctx)?;
+    
+
+        ctx.accounts.transaction_state.stage = Stage::EscrowComplete.to_code();
+        Ok(())
+    }
+
+
+    pub fn pull_back(_ctx: Context<PullBack>) -> Result<()> {
+        
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
-#[instruction(application_idx: u64)]
-pub struct InitializeNewGrant<'info> {
-    // can not provide bump target
-    // refer to https://github.com/project-serum/anchor/blob/master/CHANGELOG.md
+pub struct TransactionSetup<'info> {
     #[account(
-        init, 
-        space = State::LEN,
-        payer = sender, 
+        init,
+        space = 8 + TransactionState::LEN,
+        payer = player,
         seeds = [
-            b"application-state".as_ref(), 
-            sender.key().as_ref(),
-            receiver.key().as_ref(), 
-            mint_of_token_being_sent.key().as_ref(), 
-            application_idx.to_le_bytes().as_ref()], 
-        bump)]
-    application_state: Account<'info, State>,
+            b"transaction-state".as_ref(),
+            player.key().as_ref(),
+            beneficiary.key().as_ref(),
+            mint_of_token.key().as_ref(),
+        ],
+        bump
+    )]
+    transaction_state: Account<'info, TransactionState>,
 
     #[account(
-        init, 
-        payer = sender, 
+        init,
+        payer = player,
         seeds = [
-            b"escrow-wallet-state".as_ref(), 
-            sender.key().as_ref(), 
-            receiver.key().as_ref(), 
-            mint_of_token_being_sent.key().as_ref(), 
-            application_idx.to_le_bytes().as_ref()], 
+            b"escrow-account".as_ref(),
+            player.key().as_ref(),
+            beneficiary.key().as_ref(),
+            mint_of_token.key().as_ref(),
+        ],
         bump,
-        token::mint = mint_of_token_being_sent, 
-        token::authority = application_state
+        token::mint = mint_of_token,
+        token::authority = transaction_state
     )]
-    escrow_wallet_state: Account<'info, TokenAccount>,
+    escrow_account: Account<'info, TokenAccount>,
 
     #[account(mut)]
-    sender: Signer<'info>,
+    player: Signer<'info>,
     /// CHECK: This is not dangerous because we don't read or write from this account
-    receiver: AccountInfo<'info>, 
-    mint_of_token_being_sent: Account<'info, Mint>,
+    beneficiary: AccountInfo<'info>,
 
-    #[account(
-        mut, 
-        constraint = wallet_to_withdraw_from.owner == sender.key(), 
-        constraint = wallet_to_withdraw_from.mint == mint_of_token_being_sent.key()
-    )]
-    wallet_to_withdraw_from: Account<'info, TokenAccount>, 
+    mint_of_token: Account<'info, Mint>,
 
-    system_program: Program<'info, System>, 
-    token_program: Program<'info, Token>, 
+    system_program: Program<'info, System>,
+    token_program: Program<'info, Token>,
 
-    rent: Sysvar<'info, Rent> //Why this?
+    rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
-#[instruction(application_idx: u64)]
-pub struct CompleteGrant<'info> {
+pub struct DepositByBothParties<'info> {
     #[account(
         mut,
         seeds = [
-            b"application-state".as_ref(), 
-            sender.key().as_ref(), 
-            receiver.key.as_ref(), 
-            mint_of_token_being_sent.key().as_ref(), 
-            application_idx.to_le_bytes().as_ref()],
-        bump = application_state.state_bump,
-        has_one = sender,
-        has_one = receiver,
-        has_one = mint_of_token_being_sent,
+            b"transaction-state".as_ref(),
+            player.key().as_ref(),
+            beneficiary.key().as_ref(),
+            mint_of_token.key().as_ref()
+        ],
+        bump = transaction_state.state_bump
     )]
-    application_state: Account<'info, State>,
+    transaction_state: Account<'info, TransactionState>,
+
     #[account(
         mut,
-        seeds=[
-            b"escrow-wallet-state".as_ref(), 
-            sender.key().as_ref(), 
-            receiver.key.as_ref(), 
-            mint_of_token_being_sent.key().as_ref(), 
-            application_idx.to_le_bytes().as_ref()],
-        bump = application_state.wallet_bump,
+        seeds = [
+            b"escrow-account".as_ref(),
+            player.key().as_ref(),
+            beneficiary.key().as_ref(),
+            mint_of_token.key().as_ref()
+        ],
+        bump = transaction_state.escrow_bump
     )]
-    escrow_wallet_state: Account<'info, TokenAccount>,
+    escrow_account: Account<'info, TokenAccount>,
+
+    player: Signer<'info>,
+    beneficiary: Signer<'info>,
+
+    mint_of_token: Account<'info, Mint>,
 
     #[account(
-        init_if_needed,
-        payer = receiver,
-        associated_token::mint = mint_of_token_being_sent,
-        associated_token::authority = receiver,
+        mut,
+        associated_token::mint = mint_of_token,
+        associated_token::authority = player
     )]
-    wallet_to_deposit_to: Account<'info, TokenAccount>,
+    player_associated_token_account: Account<'info, TokenAccount>,
 
-    /// CHECK: This is not dangerous because we don't read or write from this account
-    #[account(mut)]
-    sender: AccountInfo<'info>,                   
-    #[account(mut)]
-    receiver: Signer<'info>,                       
-    mint_of_token_being_sent: Account<'info, Mint>,       
+    #[account(
+        mut,
+        associated_token::authority = beneficiary,
+        associated_token::mint = mint_of_token
+    )]
+    beneficiary_associated_token_account: Account<'info, TokenAccount>,
 
-    system_program: Program<'info, System>,
     token_program: Program<'info, Token>,
-    associated_token_program: Program<'info, AssociatedToken>,
-    rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
-#[instruction(application_idx: u64)]
-pub struct PullBackInstruction<'info> {
+#[instruction(winner: Pubkey)]
+pub struct TransferToWinner<'info> {
     #[account(
         mut,
-        seeds=[
-            b"application-state".as_ref(), 
-            sender.key().as_ref(),
-            receiver.key.as_ref(), 
-            mint_of_token_being_sent.key().as_ref(), 
-            application_idx.to_le_bytes().as_ref()],
-        bump = application_state.state_bump,
-        has_one = sender,
-        has_one = receiver,
-        has_one = mint_of_token_being_sent,
+        seeds = [
+            b"transaction-state".as_ref(),
+            player.key().as_ref(),
+            beneficiary.key().as_ref(),
+            mint_of_token.key().as_ref()
+        ],
+        bump = transaction_state.state_bump, 
     )]
-    application_state: Account<'info, State>,
-    #[account(
-        mut,
-        seeds=[
-            b"escrow-wallet-state".as_ref(), 
-            sender.key().as_ref(), 
-            receiver.key.as_ref(), 
-            mint_of_token_being_sent.key().as_ref(), 
-            application_idx.to_le_bytes().as_ref()],
-        bump = application_state.wallet_bump,
-    )]
-    escrow_wallet_state: Account<'info, TokenAccount>,    
+    transaction_state: Account<'info, TransactionState>,
 
-    #[account(mut)]
-    sender: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"escrow-account".as_ref(),
+            player.key().as_ref(),
+            beneficiary.key().as_ref(),
+            mint_of_token.key().as_ref()
+        ],
+        bump = transaction_state.escrow_bump, 
+    )]
+    escrow_account: Account<'info, TokenAccount>,
+
     /// CHECK: This is not dangerous because we don't read or write from this account
-    receiver: AccountInfo<'info>,
-    mint_of_token_being_sent: Account<'info, Mint>,
+    #[account(mut)]
+    player: AccountInfo<'info>,
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    beneficiary: AccountInfo<'info>,
 
-    system_program: Program<'info, System>,
-    token_program: Program<'info, Token>,
-    rent: Sysvar<'info, Rent>,
+    mint_of_token: Account<'info, Mint>,
 
     #[account(
         mut,
-        constraint=refund_wallet.owner == sender.key(),
-        constraint=refund_wallet.mint == mint_of_token_being_sent.key()
+        constraint = winner_associated_token_account.owner == winner,
+        constraint = winner_associated_token_account.mint == mint_of_token.key()
     )]
-    refund_wallet: Account<'info, TokenAccount>,
+    winner_associated_token_account: Account<'info, TokenAccount>,
+
+    token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+pub struct PullBack<'info> {
+       #[account(
+        mut,
+        seeds = [
+            b"transaction-state".as_ref(),
+            player.key().as_ref(),
+            beneficiary.key().as_ref(),
+            mint_of_token.key().as_ref()
+        ],
+        bump = transaction_state.state_bump
+    )]
+    transaction_state: Account<'info, TransactionState>,
+
+    #[account(
+        mut,
+        seeds = [
+            b"escrow-account".as_ref(),
+            player.key().as_ref(),
+            beneficiary.key().as_ref(),
+            mint_of_token.key().as_ref()
+        ],
+        bump = transaction_state.escrow_bump
+    )]
+    escrow_account: Account<'info, TokenAccount>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    #[account(mut)]
+    player: AccountInfo<'info>,
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    beneficiary: AccountInfo<'info>,
+
+    mint_of_token: Account<'info, Mint>,
+
+    #[account(
+        mut,
+        associated_token::mint = mint_of_token,
+        associated_token::authority = player
+    )]
+    player_associated_token_account: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        associated_token::authority = beneficiary,
+        associated_token::mint = mint_of_token
+    )]
+    beneficiary_associated_token_account: Account<'info, TokenAccount>,
+
+    token_program: Program<'info, Token>,
+
 }
 
 #[error_code]
 pub enum ErrorCode {
     #[msg("Stage is invalid")]
-    StageInvalid
+    StageInvalid,
 }

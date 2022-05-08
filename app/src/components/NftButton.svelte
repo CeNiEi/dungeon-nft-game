@@ -1,8 +1,5 @@
 <script lang="ts">
-    //export let clickHandler: (() => void) | undefined;
-	const clickHandler = () => {
-		console.log("hello");
-	}
+    export let clickHandler: (() => void) | undefined;
 </script>
 
 <div class="wrapper" on:click={clickHandler}>

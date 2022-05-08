@@ -4,10 +4,16 @@ import { Program } from "@project-serum/anchor";
 import { DungeonNft } from "../target/types/dungeon_nft";
 import assert from "assert";
 
-interface PDAParameters {
-  escrowWalletKey: anchor.web3.PublicKey,
-  stateKey: anchor.web3.PublicKey,
-  idx: anchor.BN
+interface State {
+  mint: anchor.web3.PublicKey,
+  beneficiary: anchor.web3.PublicKey,
+  beneficiarySigner: anchor.web3.Keypair,
+  beneficiaryAssociatedTokenAccount: anchor.web3.PublicKey
+  player: anchor.web3.PublicKey,
+  playerSigner: anchor.web3.Keypair,
+  playerAssociatedTokenAccount: anchor.web3.PublicKey,
+  transactionState: anchor.web3.PublicKey,
+  escrowAccount: anchor.web3.PublicKey
 }
 
 describe("DungeonNFT", () => {
@@ -17,271 +23,201 @@ describe("DungeonNFT", () => {
 
   const program = anchor.workspace.DungeonNft as Program<DungeonNft>;
 
-  let mintAddress: anchor.web3.PublicKey;
-  let sender: anchor.web3.Keypair;
-  let senderWallet: anchor.web3.PublicKey;
-  let receiver: anchor.web3.Keypair;
+  //  const MINT_ADDRESS = new anchor.web3.PublicKey('GN6bYuoecUAL6PnXXuKHwAuLz4qEbHo1F5JgA5q2AvMn');
+  //  const BENEFICIARY = new anchor.web3.PublicKey('HYK6PfsDteT7bPmhsMyFk7BuqygZjMzSQydautET9a9Z');
+  //  const BENEFICIARY_ASSOCIATED_TOKEN_ACCOUNT = new anchor.web3.PublicKey('Ej4u57S8uUDSzbn8G9xFUXnbhBhUbWbWgyESwUEyM9HK');
 
-  let pda: PDAParameters;
+  const NUM_OF_DECIMALS = 9;
 
-  const getPdaParams = async (connection: anchor.web3.Connection, sender: anchor.web3.PublicKey, receiver: anchor.web3.PublicKey, mint: anchor.web3.PublicKey): Promise<PDAParameters> => {
-    const uid = new anchor.BN(parseInt((Date.now() / 1000).toString()));
-    const uidBuffer = uid.toBuffer('le', 8);
+  let state: State;
 
-    let [statePubKey,] = await anchor.web3.PublicKey.findProgramAddress(
-      [Buffer.from("application-state"), sender.toBuffer(), receiver.toBuffer(), mint.toBuffer(), uidBuffer], program.programId
+  const createUserAssociatedTokenAccount = async (user: anchor.web3.PublicKey, userSigner: anchor.web3.Keypair, mint: anchor.web3.PublicKey, mintAuthority: anchor.web3.PublicKey, mintAuthoritySigner: anchor.web3.Keypair): Promise<anchor.web3.PublicKey> => {
+    const userAssociatedTokenAccount = await spl.getAssociatedTokenAddress(
+      mint,
+      user
     );
 
-    let [walletPubKey,] = await anchor.web3.PublicKey.findProgramAddress(
-      [Buffer.from("escrow-wallet-state"), sender.toBuffer(), receiver.toBuffer(), mint.toBuffer(), uidBuffer], program.programId
-    );
+    const tx = new anchor.web3.Transaction;
 
-    return {
-      idx: uid,
-      escrowWalletKey: walletPubKey,
-      stateKey: statePubKey,
-    }
+    tx.add(spl.createAssociatedTokenAccountInstruction(
+      user,
+      userAssociatedTokenAccount,
+      user,
+      mint
+    ));
 
+    tx.add(spl.createMintToInstruction(
+      mint,
+      userAssociatedTokenAccount,
+      mintAuthority,
+      100 * 10 ** NUM_OF_DECIMALS
+    ));
+
+    await provider.sendAndConfirm(tx, [userSigner, mintAuthoritySigner]);
+
+    return userAssociatedTokenAccount;
   }
 
-  const createMint = async (connection: anchor.web3.Connection): Promise<anchor.web3.PublicKey> => {
-    const tokenMint = new anchor.web3.Keypair();
-    const lamportsForMint = await provider.connection.getMinimumBalanceForRentExemption(spl.MintLayout.span);
+  const createUser = async (): Promise<[anchor.web3.Keypair, anchor.web3.PublicKey]> => {
+    const userSigner = new anchor.web3.Keypair;
+    const user = userSigner.publicKey;
 
-    let tx = new anchor.web3.Transaction();
+    let userTx = await provider.connection.requestAirdrop(user, 10 * anchor.web3.LAMPORTS_PER_SOL);
+    await provider.connection.confirmTransaction(userTx);
 
-    tx.add(
-      anchor.web3.SystemProgram.createAccount({
-        programId: spl.TOKEN_PROGRAM_ID,
-        space: spl.MintLayout.span,
-        fromPubkey: provider.wallet.publicKey,
-        newAccountPubkey: tokenMint.publicKey,
-        lamports: lamportsForMint
-      })
-    );
-
-    tx.add(
-      spl.createInitializeMintInstruction(
-        tokenMint.publicKey,
-        6,
-        provider.wallet.publicKey,
-        provider.wallet.publicKey
-      )
-    );
-
-    const signature = await provider.sendAndConfirm(tx, [tokenMint]);
-
-    console.log(`[${tokenMint.publicKey}] Created new mint account at ${signature}`);
-    return tokenMint.publicKey;
+    return [userSigner, user];
   }
 
-  const createUserAndAssociatedWallet = async (connection: anchor.web3.Connection, mint?: anchor.web3.PublicKey): Promise<[anchor.web3.Keypair, anchor.web3.PublicKey | undefined]> => {
-    const user = new anchor.web3.Keypair();
-    let userAssociatedTokenAccount: anchor.web3.PublicKey | undefined = undefined;
+  const readTokenAccount = async (accountPublicKey: anchor.web3.PublicKey): Promise<[spl.RawAccount, string]> => {
 
-    let txFund = new anchor.web3.Transaction();
-    txFund.add(anchor.web3.SystemProgram.transfer({
-      fromPubkey: provider.wallet.publicKey,
-      toPubkey: user.publicKey,
-      lamports: 5 * anchor.web3.LAMPORTS_PER_SOL
-    }));
-
-    const sigTxFund = await provider.sendAndConfirm(txFund);
-    console.log(`[${user.publicKey.toBase58()}] Funded new account with 5 SOL: ${sigTxFund}`);
-
-    if (mint) {
-      userAssociatedTokenAccount = await spl.getAssociatedTokenAddress(
-        mint,
-        user.publicKey
-      );
-
-      const txFundTokenAccount = new anchor.web3.Transaction();
-      txFundTokenAccount.add(spl.createAssociatedTokenAccountInstruction(
-        user.publicKey,
-        userAssociatedTokenAccount,
-        user.publicKey,
-        mint,
-      ));
-
-      txFundTokenAccount.add(spl.createMintToInstruction(
-        mint,
-        userAssociatedTokenAccount,
-        provider.wallet.publicKey,
-        1337000000
-      ));
-
-      const txFundTokenSig = await provider.sendAndConfirm(txFundTokenAccount, [user]);
-      console.log(`[${userAssociatedTokenAccount.toBase58()}] New associated account for mint ${mint.toBase58()}: ${txFundTokenSig}`);
-    }
-
-    return [user, userAssociatedTokenAccount];
-  }
-
-
-  const readAccount = async (accountPublicKey: anchor.web3.PublicKey, provider: anchor.Provider): Promise<[spl.RawAccount, string]> => {
     const tokenInfoLol = await provider.connection.getAccountInfo(accountPublicKey);
-    const data = Buffer.from(tokenInfoLol.data);
-    const accountInfo: spl.RawAccount = spl.AccountLayout.decode(data);
+    const accountInfo: spl.RawAccount = spl.AccountLayout.decode(tokenInfoLol.data);
 
     const amount = accountInfo.amount;
     return [accountInfo, amount.toString()];
   }
 
 
-  beforeEach(async () => {
-    mintAddress = await createMint(provider.connection);
-    [sender, senderWallet] = await createUserAndAssociatedWallet(provider.connection, mintAddress);
+  it('can setup all the prereqs', async () => {
 
-    [receiver,] = await createUserAndAssociatedWallet(provider.connection);
+    let [playerSigner, player] = await createUser();
+    let [beneficiarySigner, beneficiary] = await createUser();
 
-    pda = await getPdaParams(provider.connection, sender.publicKey, receiver.publicKey, mintAddress);
+    const mint = await spl.createMint(provider.connection, beneficiarySigner, beneficiary, beneficiary, NUM_OF_DECIMALS);
+
+    const playerAssociatedTokenAccount = await createUserAssociatedTokenAccount(player, playerSigner, mint, beneficiary, beneficiarySigner);
+    const beneficiaryAssociatedTokenAccount = await createUserAssociatedTokenAccount(beneficiary, beneficiarySigner, mint, beneficiary, beneficiarySigner);
+
+    let [transactionState,] = await anchor.web3.PublicKey.findProgramAddress(
+      [anchor.utils.bytes.utf8.encode("transaction-state"), player.toBuffer(), beneficiary.toBuffer(), mint.toBuffer()],
+      program.programId);
+
+    let [escrowAccount,] = await anchor.web3.PublicKey.findProgramAddress(
+      [anchor.utils.bytes.utf8.encode("escrow-account"), player.toBuffer(), beneficiary.toBuffer(), mint.toBuffer()],
+      program.programId);
+
+    state = {
+      mint: mint,
+      beneficiary: beneficiary,
+      beneficiarySigner: beneficiarySigner,
+      beneficiaryAssociatedTokenAccount: beneficiaryAssociatedTokenAccount,
+      player: player,
+      playerSigner: playerSigner,
+      playerAssociatedTokenAccount: playerAssociatedTokenAccount,
+      transactionState: transactionState,
+      escrowAccount: escrowAccount
+    }
   });
 
   it('can initialize a safe payment by the sender', async () => {
-    const [, senderBalancePre] = await readAccount(senderWallet, provider);
-    assert.equal(senderBalancePre, '1337000000');
-
-    const amount = new anchor.BN(20000000);
-
-    const tx1 = await program.methods.initializeNewGrant(pda.idx, amount).accounts({
-      applicationState: pda.stateKey,
-      escrowWalletState: pda.escrowWalletKey,
-      mintOfTokenBeingSent: mintAddress,
-      sender: sender.publicKey,
-      receiver: receiver.publicKey,
-      walletToWithdrawFrom: senderWallet,
+    const tx = await program.methods.transactionSetup().accounts({
+      transactionState: state.transactionState,
+      escrowAccount: state.escrowAccount,
+      player: state.player,
+      beneficiary: state.beneficiary,
+      mintOfToken: state.mint,
 
       systemProgram: anchor.web3.SystemProgram.programId,
       tokenProgram: spl.TOKEN_PROGRAM_ID,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY
-    }).signers([sender]).rpc();
+    }).signers([state.playerSigner]).rpc();
 
-    console.log(`Initialized a new Safe Pay instance. Sender will pay receiver 20 tokens`);
+    assert.ok(tx);
+    console.log(`Initialized a new Safe Pay instance with signature: ${tx}`);
+  });
 
-    const [, senderBalancePost] = await readAccount(senderWallet, provider);
-    assert.equal(senderBalancePost, '1317000000');
-    const [, escrowBalancePost] = await readAccount(pda.escrowWalletKey, provider);
-    assert.equal(escrowBalancePost, '20000000');
+  it('can fund the escrow by the both the parties', async () => {
+    const [, preTransactionPlayerBalance] = await readTokenAccount(state.playerAssociatedTokenAccount);
+    assert.equal(preTransactionPlayerBalance, 100 * 10 ** NUM_OF_DECIMALS);
 
-    const state = await program.account.state.fetch(pda.stateKey);
-    assert.equal(state.amountOfTokens.toString(), '20000000');
-    assert.equal(state.stage.toString(), '1');
+    const [, preTransactionBeneficiaryBalance] = await readTokenAccount(state.beneficiaryAssociatedTokenAccount);
+    assert.equal(preTransactionBeneficiaryBalance, 100 * 10 ** NUM_OF_DECIMALS);
+
+    const amount = new anchor.BN(10 * 10 ** NUM_OF_DECIMALS)
+
+    const tx = await program.methods.depositByBothParties(amount).accounts({
+      transactionState: state.transactionState,
+      escrowAccount: state.escrowAccount,
+      player: state.player,
+      beneficiary: state.beneficiary,
+      mintOfToken: state.mint,
+      playerAssociatedTokenAccount: state.playerAssociatedTokenAccount,
+      beneficiaryAssociatedTokenAccount: state.beneficiaryAssociatedTokenAccount,
+
+      tokenProgram: spl.TOKEN_PROGRAM_ID,
+    }).signers([state.playerSigner, state.beneficiarySigner]).rpc();
+
+    const [, postTransactionPlayerBalance] = await readTokenAccount(state.playerAssociatedTokenAccount);
+    assert.equal(postTransactionPlayerBalance, 90 * 10 ** NUM_OF_DECIMALS);
+
+    const [, postTransactionBeneficiaryBalance] = await readTokenAccount(state.beneficiaryAssociatedTokenAccount);
+    assert.equal(postTransactionBeneficiaryBalance, 90 * 10 ** NUM_OF_DECIMALS);
+
+    const [, postTransactoinEscrowBalance] = await readTokenAccount(state.escrowAccount);
+    assert.equal(postTransactoinEscrowBalance, 2 * 10 * 10 ** NUM_OF_DECIMALS);
+
+    assert.ok(tx);
+    console.log(`Funded the escrow with signature: ${tx}`);
 
   });
 
-  it('can send escrow funds to Bob', async () => {
-    const [, aliceBalancePre] = await readAccount(senderWallet, provider);
-    assert.equal(aliceBalancePre, '1337000000');
+  it('can transfer the entire funds to the winner', async () => {
 
-    const amount = new anchor.BN(20000000);
+    let winner: anchor.web3.PublicKey; 
+    let winnerAssociatedTokenAccount: anchor.web3.PublicKey;
 
-    const tx1 = await program.methods.initializeNewGrant(pda.idx, amount).accounts({
-      applicationState: pda.stateKey,
-      escrowWalletState: pda.escrowWalletKey,
-      mintOfTokenBeingSent: mintAddress,
-      sender: sender.publicKey,
-      receiver: receiver.publicKey,
-      walletToWithdrawFrom: senderWallet,
-
-      systemProgram: anchor.web3.SystemProgram.programId,
-      tokenProgram: spl.TOKEN_PROGRAM_ID,
-      rent: anchor.web3.SYSVAR_RENT_PUBKEY
-    }).signers([sender]).rpc();
-
-    console.log(`Initialized a new Safe Pay instance. Sender will pay receiver 20 tokens`);
-
-    const [, senderBalancePost] = await readAccount(senderWallet, provider);
-    assert.equal(senderBalancePost, '1317000000');
-    const [, escrowBalancePost] = await readAccount(pda.escrowWalletKey, provider);
-    assert.equal(escrowBalancePost, '20000000');
-
-
-    const receiverTokenAccount = await spl.getAssociatedTokenAddress(
-      mintAddress,
-      receiver.publicKey
-    )
-
-    const tx2 = await program.methods.completeGrant(pda.idx).accounts({
-      applicationState: pda.stateKey,
-      escrowWalletState: pda.escrowWalletKey,
-      mintOfTokenBeingSent: mintAddress,
-      sender: sender.publicKey,
-      receiver: receiver.publicKey,
-      walletToDepositTo: receiverTokenAccount,
-
-      systemProgram: anchor.web3.SystemProgram.programId,
-      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      tokenProgram: spl.TOKEN_PROGRAM_ID,
-      associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID
-    }).signers([receiver]).rpc();
-
-    const [, receiverBalance] = await readAccount(receiverTokenAccount, provider);
-    assert.equal(receiverBalance, '20000000');
-
-    try {
-      await readAccount(pda.escrowWalletKey, provider);
-      return assert.fail("Account should be closed");
-    } catch (e) {
-      assert.equal(e.message, "Cannot read properties of null (reading 'data')");
+    if (Math.random() < 0.5) {
+      winner = state.player;
+      winnerAssociatedTokenAccount = state.playerAssociatedTokenAccount;
+    } else {
+      winner = state.beneficiary;
+      winnerAssociatedTokenAccount = state.beneficiaryAssociatedTokenAccount;
     }
-  });
 
-  it('can pull back funds once they are deposited', async () => {
-    const [, senderBalancePre] = await readAccount(senderWallet, provider);
-    assert.equal(senderBalancePre, '1337000000');
+    const [, preTransactionWinnerBalance] = await readTokenAccount(winnerAssociatedTokenAccount);
+    assert.equal(preTransactionWinnerBalance, 90 * 10 ** NUM_OF_DECIMALS);
 
-    const amount = new anchor.BN(20000000);
+    const [, preTransactoinEscrowBalance] = await readTokenAccount(state.escrowAccount);
+    assert.equal(preTransactoinEscrowBalance, 2 * 10 * 10 ** NUM_OF_DECIMALS);
 
-    const tx1 = await program.methods.initializeNewGrant(pda.idx, amount).accounts({
-      applicationState: pda.stateKey,
-      escrowWalletState: pda.escrowWalletKey,
-      mintOfTokenBeingSent: mintAddress,
-      sender: sender.publicKey,
-      receiver: receiver.publicKey,
-      walletToWithdrawFrom: senderWallet,
-
-      systemProgram: anchor.web3.SystemProgram.programId,
-      tokenProgram: spl.TOKEN_PROGRAM_ID,
-      rent: anchor.web3.SYSVAR_RENT_PUBKEY
-    }).signers([sender]).rpc();
-
-    console.log(`Initialized a new Safe Pay instance. Sender will pay receiver 20 tokens`);
-
-    const [, senderBalancePost] = await readAccount(senderWallet, provider);
-    assert.equal(senderBalancePost, '1317000000');
-    const [, escrowBalancePost] = await readAccount(pda.escrowWalletKey, provider);
-    assert.equal(escrowBalancePost, '20000000');
-
-    const tx2 = await program.methods.pullBack(pda.idx).accounts({
-      applicationState: pda.stateKey, 
-      escrowWalletState: pda.escrowWalletKey, 
-      mintOfTokenBeingSent: mintAddress, 
-      sender: sender.publicKey, 
-      receiver: receiver.publicKey, 
-      refundWallet: senderWallet,
-
-      systemProgram: anchor.web3.SystemProgram.programId, 
-      rent: anchor.web3.SYSVAR_RENT_PUBKEY, 
+    const tx = await program.methods.transferToWinner(winner).accounts({
+      transactionState: state.transactionState, 
+      escrowAccount: state.escrowAccount, 
+      player: state.player, 
+      beneficiary: state.beneficiary, 
+      mintOfToken: state.mint,
+      winnerAssociatedTokenAccount: winnerAssociatedTokenAccount, 
       tokenProgram: spl.TOKEN_PROGRAM_ID
-    }).signers([sender]).rpc();
-      
-    // Assert that 20 tokens were sent back.
-    const [, senderBalanceRefund] = await readAccount(senderWallet, provider);
-    assert.equal(senderBalanceRefund, '1337000000');
+    }).rpc();
 
-    // Assert that escrow was correctly closed.
+    const [, postTransactionWinnerBalance] = await readTokenAccount(winnerAssociatedTokenAccount);
+    assert.equal(postTransactionWinnerBalance, 110 * 10 ** NUM_OF_DECIMALS)
+
     try {
-      await readAccount(pda.escrowWalletKey, provider);
+      await readTokenAccount(state.escrowAccount);
       return assert.fail("Account should be closed");
     } catch (e) {
       assert.equal(e.message, "Cannot read properties of null (reading 'data')");
     }
 
-    const state = await program.account.state.fetch(pda.stateKey);
-    assert.equal(state.amountOfTokens.toString(), '20000000');
-    assert.equal(state.stage.toString(), '3');
+//    try {
+      //await readTokenAccount(state.transactionState);
+      //return assert.fail("Account should be deleted");
+    //} catch (e) {
+      //assert.equal(e.message, "Cannot read properties of null (reading 'data')");
+    //}
 
-  })
+    assert.ok(tx);
+    console.log(`Successfully transfered the funds to the winner with signature: ${tx}`);
+  });
+
+  /*
+  it('can pull back the funds by player', async () => {
+
+  });
 
 
+  */
 });
+
+

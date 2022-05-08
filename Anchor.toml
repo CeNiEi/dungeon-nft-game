@@ -3,6 +3,10 @@ seeds = false
 [programs.localnet]
 dungeon_nft = "5p3fWKASxACkTksYqPci3PAd2NKXmtwTRR1QyN7q6ogi"
 
+[programs.devnet]
+dungeon_nft = "5p3fWKASxACkTksYqPci3PAd2NKXmtwTRR1QyN7q6ogi"
+
+
 [registry]
 url = "https://anchor.projectserum.com"
 
@@ -11,4 +15,4 @@ cluster = "localnet"
 wallet = "/home/ceniei/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts --full-trace"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/DungeonNFT.ts --full-trace"

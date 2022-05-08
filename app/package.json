@@ -6,7 +6,7 @@
     "build": "svelte-kit build",
     "package": "svelte-kit package",
     "preview": "svelte-kit preview",
-    "prepare": "svelte-kit sync && sudo npm run smui-theme",
+    "prepare": "svelte-kit sync && npm run smui-theme",
     "smui-theme": "smui-theme compile static/smui.css -i src/theme",
     "test": "playwright test",
     "check": "svelte-check --tsconfig ./tsconfig.json",

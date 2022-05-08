@@ -4,14 +4,13 @@
 	import { goto } from '$app/navigation';
 
 	const goToInstructions = () => {
-		console.log("reached");
-		goto('game');
+		goto('instructions');
 	};
 </script>
 
 <NftTitle />
 <div class="container">
-	<NftButton/>
+	<NftButton clickHandler={goToInstructions}/>
 </div>
 
 <style lang="scss">
