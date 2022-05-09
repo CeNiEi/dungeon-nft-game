@@ -8,7 +8,6 @@ pub enum Stage {
     Initialized,
     FundsDeposited,
     EscrowComplete,
-    PullBackComplete,
 }
 
 impl Stage {
@@ -17,7 +16,6 @@ impl Stage {
             Stage::Initialized => 1,
             Stage::FundsDeposited => 2,
             Stage::EscrowComplete => 3,
-            Stage::PullBackComplete => 4,
         }
     }
 
@@ -26,7 +24,6 @@ impl Stage {
             1 => Ok(Stage::Initialized),
             2 => Ok(Stage::FundsDeposited),
             3 => Ok(Stage::EscrowComplete),
-            4 => Ok(Stage::PullBackComplete),
             unknown_value => {
                 msg!("Unknown stage: {}", unknown_value);
                 Err(error!(ErrorCode::StageInvalid).into())
@@ -125,7 +122,7 @@ pub mod dungeon_nft {
                 .to_account_info(),
             ctx.accounts.escrow_account.to_account_info(),
             ctx.accounts.token_program.to_account_info(),
-            outer.as_ref(),
+            outer.as_ref()
         )?;
 
         //for the beneficiary
@@ -137,7 +134,7 @@ pub mod dungeon_nft {
                 .to_account_info(),
             ctx.accounts.escrow_account.to_account_info(),
             ctx.accounts.token_program.to_account_info(),
-            outer.as_ref(),
+            outer.as_ref()
         )?;
 
         ctx.accounts.transaction_state.amount_of_tokens = amount;
@@ -186,11 +183,13 @@ pub mod dungeon_nft {
         ctx.accounts.escrow_account.reload()?;
         assert!(ctx.accounts.escrow_account.amount == 0);
 
-     let close_escrow_account_instruction = anchor_spl::token::CloseAccount{
+        let close_escrow_account_instruction = anchor_spl::token::CloseAccount{
             account: ctx.accounts.escrow_account.to_account_info(),
             destination: ctx.accounts.player.to_account_info(),
             authority: ctx.accounts.transaction_state.to_account_info(),
         };
+
+
         let close_escrow_account_cpi_ctx = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
             close_escrow_account_instruction,
@@ -204,8 +203,67 @@ pub mod dungeon_nft {
     }
 
 
-    pub fn pull_back(_ctx: Context<PullBack>) -> Result<()> {
-        
+    pub fn pull_back(ctx: Context<PullBack>) -> Result<()> {
+         if Stage::from(ctx.accounts.transaction_state.stage)? != Stage::FundsDeposited {
+            msg!(
+                "Stage is invalid, state stage is {}",
+                ctx.accounts.transaction_state.stage
+            );
+            return Err(ErrorCode::StageInvalid.into());
+        }
+
+        assert!(ctx.accounts.escrow_account.amount == 2 * ctx.accounts.transaction_state.amount_of_tokens);
+
+        let mint_of_token_public_key = ctx.accounts.mint_of_token.key().clone();
+        let state_bump_bytes = ctx.accounts.transaction_state.state_bump.to_le_bytes();
+        let inner = vec![
+            b"transaction-state".as_ref(),
+            ctx.accounts.player.key.as_ref(),
+            ctx.accounts.beneficiary.key.as_ref(),
+            mint_of_token_public_key.as_ref(),
+            state_bump_bytes.as_ref(),
+        ];
+        let outer = vec![inner.as_slice()];
+
+
+        secure_transfer_cpi(
+            ctx.accounts.transaction_state.amount_of_tokens,
+            ctx.accounts.transaction_state.to_account_info(),
+            ctx.accounts.escrow_account.to_account_info(),
+            ctx.accounts
+                .player_associated_token_account
+                .to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
+            outer.as_ref(),
+        )?;
+
+  
+        secure_transfer_cpi(
+            ctx.accounts.transaction_state.amount_of_tokens,
+            ctx.accounts.transaction_state.to_account_info(),
+            ctx.accounts.escrow_account.to_account_info(),
+            ctx.accounts
+                .beneficiary_associated_token_account
+                .to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
+            outer.as_ref(),
+        )?;
+
+ 
+        let close_escrow_account_instruction = anchor_spl::token::CloseAccount{
+            account: ctx.accounts.escrow_account.to_account_info(),
+            destination: ctx.accounts.player.to_account_info(),
+            authority: ctx.accounts.transaction_state.to_account_info(),
+        };
+
+
+        let close_escrow_account_cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            close_escrow_account_instruction,
+            outer.as_slice(),
+        );
+        anchor_spl::token::close_account(close_escrow_account_cpi_ctx)?;
+    
         Ok(())
     }
 }
@@ -314,6 +372,7 @@ pub struct TransferToWinner<'info> {
             mint_of_token.key().as_ref()
         ],
         bump = transaction_state.state_bump, 
+        close = player
     )]
     transaction_state: Account<'info, TransactionState>,
 
@@ -357,7 +416,8 @@ pub struct PullBack<'info> {
             beneficiary.key().as_ref(),
             mint_of_token.key().as_ref()
         ],
-        bump = transaction_state.state_bump
+        bump = transaction_state.state_bump,
+        close = player
     )]
     transaction_state: Account<'info, TransactionState>,
 

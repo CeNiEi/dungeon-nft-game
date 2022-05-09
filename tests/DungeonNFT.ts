@@ -163,7 +163,7 @@ describe("DungeonNFT", () => {
 
   it('can transfer the entire funds to the winner', async () => {
 
-    let winner: anchor.web3.PublicKey; 
+    let winner: anchor.web3.PublicKey;
     let winnerAssociatedTokenAccount: anchor.web3.PublicKey;
 
     if (Math.random() < 0.5) {
@@ -181,12 +181,12 @@ describe("DungeonNFT", () => {
     assert.equal(preTransactoinEscrowBalance, 2 * 10 * 10 ** NUM_OF_DECIMALS);
 
     const tx = await program.methods.transferToWinner(winner).accounts({
-      transactionState: state.transactionState, 
-      escrowAccount: state.escrowAccount, 
-      player: state.player, 
-      beneficiary: state.beneficiary, 
+      transactionState: state.transactionState,
+      escrowAccount: state.escrowAccount,
+      player: state.player,
+      beneficiary: state.beneficiary,
       mintOfToken: state.mint,
-      winnerAssociatedTokenAccount: winnerAssociatedTokenAccount, 
+      winnerAssociatedTokenAccount: winnerAssociatedTokenAccount,
       tokenProgram: spl.TOKEN_PROGRAM_ID
     }).rpc();
 
@@ -200,24 +200,65 @@ describe("DungeonNFT", () => {
       assert.equal(e.message, "Cannot read properties of null (reading 'data')");
     }
 
-//    try {
-      //await readTokenAccount(state.transactionState);
-      //return assert.fail("Account should be deleted");
-    //} catch (e) {
-      //assert.equal(e.message, "Cannot read properties of null (reading 'data')");
-    //}
+    try {
+      await readTokenAccount(state.transactionState);
+      return assert.fail("Account should be deleted");
+    } catch (e) {
+      assert.equal(e.message, "Cannot read properties of null (reading 'data')");
+    }
 
     assert.ok(tx);
     console.log(`Successfully transfered the funds to the winner with signature: ${tx}`);
   });
 
-  /*
   it('can pull back the funds by player', async () => {
+    const [, preTransactionPlayerBalance] = await readTokenAccount(state.playerAssociatedTokenAccount);
+    assert.equal(preTransactionPlayerBalance, 90 * 10 ** NUM_OF_DECIMALS);
+
+    const [, preTransactionBeneficiaryBalance] = await readTokenAccount(state.beneficiaryAssociatedTokenAccount);
+    assert.equal(preTransactionBeneficiaryBalance, 90 * 10 ** NUM_OF_DECIMALS);
+
+    const [, preTransactoinEscrowBalance] = await readTokenAccount(state.escrowAccount);
+    assert.equal(preTransactoinEscrowBalance, 2 * 10 * 10 ** NUM_OF_DECIMALS);
+
+    const tx = await program.methods.pullBack().accounts({
+      transactionState: state.transactionState,
+      escrowAccount: state.escrowAccount,
+      player: state.player,
+      beneficiary: state.beneficiary,
+      mintOfToken: state.mint,
+      playerAssociatedTokenAccount: state.playerAssociatedTokenAccount,
+      beneficiaryAssociatedTokenAccount: state.beneficiaryAssociatedTokenAccount,
+
+      tokenProgram: spl.TOKEN_PROGRAM_ID,
+    }).rpc();
+
+    const [, postTransactionPlayerBalance] = await readTokenAccount(state.playerAssociatedTokenAccount);
+    assert.equal(postTransactionPlayerBalance, 100 * 10 ** NUM_OF_DECIMALS);
+
+    const [, postTransactionBeneficiaryBalance] = await readTokenAccount(state.beneficiaryAssociatedTokenAccount);
+    assert.equal(postTransactionBeneficiaryBalance, 100 * 10 ** NUM_OF_DECIMALS);
+
+    try {
+      await readTokenAccount(state.escrowAccount);
+      return assert.fail("Account should be closed");
+    } catch (e) {
+      assert.equal(e.message, "Cannot read properties of null (reading 'data')");
+    }
+
+    try {
+      await readTokenAccount(state.transactionState);
+      return assert.fail("Account should be deleted");
+    } catch (e) {
+      assert.equal(e.message, "Cannot read properties of null (reading 'data')");
+    }
+
+    assert.ok(tx);
+    console.log(`Successfully pulled back the funds with signature: ${tx}`);
 
   });
 
 
-  */
 });
 
 
