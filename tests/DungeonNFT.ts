@@ -38,6 +38,7 @@ describe("DungeonNFTEscrowComplete", () => {
     );
 
     const tx = new anchor.web3.Transaction;
+    const amount = 100;
 
     tx.add(spl.createAssociatedTokenAccountInstruction(
       user,
@@ -50,7 +51,7 @@ describe("DungeonNFTEscrowComplete", () => {
       mint,
       userAssociatedTokenAccount,
       mintAuthority,
-      100 * 10 ** NUM_OF_DECIMALS
+      amount * 10 ** NUM_OF_DECIMALS
     ));
 
     await provider.sendAndConfirm(tx, [userSigner, mintAuthoritySigner]);
@@ -62,7 +63,8 @@ describe("DungeonNFTEscrowComplete", () => {
     const userSigner = new anchor.web3.Keypair;
     const user = userSigner.publicKey;
 
-    let userTx = await provider.connection.requestAirdrop(user, 10 * anchor.web3.LAMPORTS_PER_SOL);
+    const num_of_lamports = 10;
+    let userTx = await provider.connection.requestAirdrop(user, num_of_lamports * anchor.web3.LAMPORTS_PER_SOL);
     await provider.connection.confirmTransaction(userTx);
 
     return [userSigner, user];
@@ -110,7 +112,7 @@ describe("DungeonNFTEscrowComplete", () => {
   });
 
   it('can initialize a safe payment by the sender', async () => {
-    const tx = await program.methods.transactionSetup().accounts({
+    const tx = await program.methods.transactionSetupInstruction().accounts({
       transactionState: state.transactionState,
       escrowAccount: state.escrowAccount,
       player: state.player,
@@ -135,7 +137,7 @@ describe("DungeonNFTEscrowComplete", () => {
 
     const amount = new anchor.BN(10 * 10 ** NUM_OF_DECIMALS)
 
-    const tx = await program.methods.depositByBothParties(amount).accounts({
+    const tx = await program.methods.depositByBothPartiesInstruction(amount).accounts({
       transactionState: state.transactionState,
       escrowAccount: state.escrowAccount,
       player: state.player,
@@ -180,7 +182,7 @@ describe("DungeonNFTEscrowComplete", () => {
     const [, preTransactoinEscrowBalance] = await readTokenAccount(state.escrowAccount);
     assert.equal(preTransactoinEscrowBalance, 2 * 10 * 10 ** NUM_OF_DECIMALS);
 
-    const tx = await program.methods.transferToWinner(winner).accounts({
+    const tx = await program.methods.transferToWinnerInstruction(winner).accounts({
       transactionState: state.transactionState,
       escrowAccount: state.escrowAccount,
       player: state.player,
@@ -308,7 +310,7 @@ describe("DungeonNFTPullBack", () => {
   });
 
   it('can initialize a safe payment by the sender', async () => {
-    const tx = await program.methods.transactionSetup().accounts({
+    const tx = await program.methods.transactionSetupInstruction().accounts({
       transactionState: state.transactionState,
       escrowAccount: state.escrowAccount,
       player: state.player,
@@ -333,7 +335,7 @@ describe("DungeonNFTPullBack", () => {
 
     const amount = new anchor.BN(10 * 10 ** NUM_OF_DECIMALS)
 
-    const tx = await program.methods.depositByBothParties(amount).accounts({
+    const tx = await program.methods.depositByBothPartiesInstruction(amount).accounts({
       transactionState: state.transactionState,
       escrowAccount: state.escrowAccount,
       player: state.player,
@@ -369,7 +371,7 @@ describe("DungeonNFTPullBack", () => {
     const [, preTransactoinEscrowBalance] = await readTokenAccount(state.escrowAccount);
     assert.equal(preTransactoinEscrowBalance, 2 * 10 * 10 ** NUM_OF_DECIMALS);
 
-    const tx = await program.methods.pullBack().accounts({
+    const tx = await program.methods.pullbackInstruction().accounts({
       transactionState: state.transactionState,
       escrowAccount: state.escrowAccount,
       player: state.player,
