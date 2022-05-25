@@ -1,12 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::{
-    state,
-    utils,
-    error};
+use crate::{error, state, utils};
 
 pub fn deposit_by_both_parties(ctx: Context<DepositByBothParties>, amount: u64) -> Result<()> {
+    // add checkcs to ensure enough balance
+
     if utils::Stage::from(ctx.accounts.transaction_state.stage)? != utils::Stage::Initialized {
         msg!(
             "Stage is invalid, state stage is {}",
@@ -35,7 +34,7 @@ pub fn deposit_by_both_parties(ctx: Context<DepositByBothParties>, amount: u64) 
             .to_account_info(),
         ctx.accounts.escrow_account.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        outer.as_ref(),
+        Some(outer.as_ref()),
     )?;
 
     //for the beneficiary
@@ -47,7 +46,7 @@ pub fn deposit_by_both_parties(ctx: Context<DepositByBothParties>, amount: u64) 
             .to_account_info(),
         ctx.accounts.escrow_account.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        outer.as_ref(),
+        Some(outer.as_ref()),
     )?;
 
     ctx.accounts.transaction_state.amount_of_tokens = amount;

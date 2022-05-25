@@ -1,11 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::{
-    utils,
-    error,
-    state
-};
+use crate::{error, state, utils};
 
 pub fn transfer_to_winner(ctx: Context<TransferToWinner>, _winner: Pubkey) -> Result<()> {
     if utils::Stage::from(ctx.accounts.transaction_state.stage)? != utils::Stage::FundsDeposited {
@@ -35,7 +31,7 @@ pub fn transfer_to_winner(ctx: Context<TransferToWinner>, _winner: Pubkey) -> Re
             .winner_associated_token_account
             .to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        outer.as_ref(),
+        Some(outer.as_ref()),
     )?;
 
     utils::close_account_cpi(
@@ -49,7 +45,6 @@ pub fn transfer_to_winner(ctx: Context<TransferToWinner>, _winner: Pubkey) -> Re
     ctx.accounts.transaction_state.stage = utils::Stage::EscrowComplete.to_code();
     Ok(())
 }
-
 
 #[derive(Accounts)]
 #[instruction(winner: Pubkey)]
@@ -96,4 +91,3 @@ pub struct TransferToWinner<'info> {
 
     token_program: Program<'info, Token>,
 }
-

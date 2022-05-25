@@ -4,4 +4,7 @@ use anchor_lang::prelude::*;
 pub enum ErrorCode {
     #[msg("Stage is invalid")]
     StageInvalid,
+
+    #[msg("Insufficient balance")]
+    NotEnoughBalance,
 }

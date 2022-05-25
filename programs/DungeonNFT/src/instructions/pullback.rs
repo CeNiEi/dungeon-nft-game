@@ -1,11 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::{
-    error,
-    state,
-    utils,
-};
+use crate::{error, state, utils};
 
 pub fn pull_back(ctx: Context<PullBack>) -> Result<()> {
     if utils::Stage::from(ctx.accounts.transaction_state.stage)? != utils::Stage::FundsDeposited {
@@ -39,7 +35,7 @@ pub fn pull_back(ctx: Context<PullBack>) -> Result<()> {
             .player_associated_token_account
             .to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        outer.as_ref(),
+        Some(outer.as_ref()),
     )?;
 
     utils::secure_transfer_cpi(
@@ -50,7 +46,7 @@ pub fn pull_back(ctx: Context<PullBack>) -> Result<()> {
             .beneficiary_associated_token_account
             .to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        outer.as_ref(),
+        Some(outer.as_ref()),
     )?;
 
     utils::close_account_cpi(
