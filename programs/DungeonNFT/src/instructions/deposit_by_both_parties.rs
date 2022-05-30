@@ -34,7 +34,7 @@ pub fn deposit_by_both_parties(ctx: Context<DepositByBothParties>, amount: u64) 
             .to_account_info(),
         ctx.accounts.escrow_account.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        Some(outer.as_ref()),
+        outer.as_ref(),
     )?;
 
     //for the beneficiary
@@ -46,7 +46,7 @@ pub fn deposit_by_both_parties(ctx: Context<DepositByBothParties>, amount: u64) 
             .to_account_info(),
         ctx.accounts.escrow_account.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        Some(outer.as_ref()),
+        outer.as_ref(),
     )?;
 
     ctx.accounts.transaction_state.amount_of_tokens = amount;

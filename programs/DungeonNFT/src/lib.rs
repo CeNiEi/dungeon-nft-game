@@ -13,6 +13,10 @@ declare_id!("5p3fWKASxACkTksYqPci3PAd2NKXmtwTRR1QyN7q6ogi");
 pub mod dungeon_nft {
     use super::*;
 
+    // !!!!!!!!!!!!!!
+    // NEED TO CHANGE THE TRANSACTION SETUP
+    // ONLY THE PLAYER NEEDS TO BE A SIGNER SEED
+    // TRANSFER TO WINNER NEEDS TO BE MERGED WITH DEPOIST BY BOTH PARTIES
     pub fn transaction_setup_instruction(ctx: Context<TransactionSetup>) -> Result<()> {
         transaction_setup::transaction_setup(ctx)
     }
@@ -49,5 +53,13 @@ pub mod dungeon_nft {
         sol_amount: u64
     ) -> Result<()> {
         liquidity::add_liquidity(ctx, token_amount, sol_amount)
+    }
+
+    pub fn swap_tokens_instruction(
+        ctx: Context<SwapTokens>, 
+        amount_in: u64, 
+        sol_to_token: bool
+    ) -> Result<()> {
+        swap_tokens::swap_tokens(ctx, amount_in, sol_to_token)
     }
 }

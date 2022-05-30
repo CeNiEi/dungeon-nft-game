@@ -37,7 +37,7 @@ pub fn secure_transfer_cpi<'info>(
     sender_token_account: AccountInfo<'info>,
     receiver_token_account: AccountInfo<'info>,
     token_program: AccountInfo<'info>,
-    signer_seeds: Option<&[&[&[u8]]]>,
+    signer_seeds: &[&[&[u8]]],
 ) -> Result<()> {
     let secure_transfer_instruction = anchor_spl::token::Transfer {
         from: sender_token_account,
@@ -45,14 +45,8 @@ pub fn secure_transfer_cpi<'info>(
         authority: sender_authority,
     };
 
-    let secure_transfer_cpi_ctx = match signer_seeds.is_some() {
-        true => CpiContext::new_with_signer(
-            token_program,
-            secure_transfer_instruction,
-            signer_seeds.unwrap(),
-        ),
-        false => CpiContext::new(token_program, secure_transfer_instruction),
-    };
+    let secure_transfer_cpi_ctx =
+        CpiContext::new_with_signer(token_program, secure_transfer_instruction, signer_seeds);
 
     anchor_spl::token::transfer(secure_transfer_cpi_ctx, amount)
 }

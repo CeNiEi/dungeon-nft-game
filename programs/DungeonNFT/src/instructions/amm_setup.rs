@@ -29,7 +29,7 @@ pub struct AMMSetup<'info> {
         payer = beneficiary, 
         seeds = [
             b"market-state".as_ref(), 
-            beneficiary.key().as_ref(),
+            beneficiary.key().as_ref()
         ], 
         bump, 
     )]
@@ -45,7 +45,7 @@ pub struct AMMSetup<'info> {
         ], 
         bump,
         token::mint = token_mint,
-        token::authority = beneficiary
+        token::authority = market_state
     )]
     pub token_vault: Account<'info, TokenAccount>,
 
@@ -59,7 +59,7 @@ pub struct AMMSetup<'info> {
         ],
         bump, 
         token::mint = sol_mint, 
-        token::authority = beneficiary
+        token::authority = market_state
     )]
     pub sol_vault: Account<'info, TokenAccount>,
 

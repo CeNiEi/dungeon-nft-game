@@ -1,5 +1,6 @@
 import * as anchor from "@project-serum/anchor";
 import * as spl from "@solana/spl-token";
+
 import { Program } from "@project-serum/anchor";
 import { DungeonNft } from "../target/types/dungeon_nft";
 import assert from "assert";
@@ -12,16 +13,23 @@ const NUM_OF_DECIMALS = 9;
 interface State {
     tokenMint: anchor.web3.PublicKey,
     solMint: anchor.web3.PublicKey,
+
     beneficiary: anchor.web3.PublicKey,
     beneficiarySigner: anchor.web3.Keypair,
+    player: anchor.web3.PublicKey,
+    playerSigner: anchor.web3.Keypair,
+
     beneficiaryTokenAssociatedTokenAccount: anchor.web3.PublicKey,
     beneficiarySolAssociatedTokenAccount: anchor.web3.PublicKey,
+    playerTokenAssociatedTokenAccount: anchor.web3.PublicKey,
+    playerSolAssociatedTokenAccount: anchor.web3.PublicKey,
+
     marketState: anchor.web3.PublicKey,
     tokenVault: anchor.web3.PublicKey,
     solVault: anchor.web3.PublicKey,
 };
 
-const createUserAssociatedTokenAccount = async (provider: anchor.AnchorProvider, user: anchor.web3.PublicKey, userSigner: anchor.web3.Keypair, mint: anchor.web3.PublicKey, mintAuthority: anchor.web3.PublicKey, mintAuthoritySigner: anchor.web3.Keypair): Promise<anchor.web3.PublicKey> => {
+const createUserAssociatedTokenAccount = async (provider: anchor.AnchorProvider, user: anchor.web3.PublicKey, userSigner: anchor.web3.Keypair, mint: anchor.web3.PublicKey, mintAuthority?: anchor.web3.PublicKey, mintAuthoritySigner?: anchor.web3.Keypair): Promise<anchor.web3.PublicKey> => {
     const userAssociatedTokenAccount = await spl.getAssociatedTokenAddress(
         mint,
         user
@@ -42,7 +50,7 @@ const createUserAssociatedTokenAccount = async (provider: anchor.AnchorProvider,
             anchor.web3.SystemProgram.transfer({
                 fromPubkey: user,
                 toPubkey: userAssociatedTokenAccount,
-                lamports: 3 * anchor.web3.LAMPORTS_PER_SOL
+                lamports: 5 * anchor.web3.LAMPORTS_PER_SOL
             }),
             createSyncNativeInstruction(userAssociatedTokenAccount)
         );
@@ -85,12 +93,16 @@ const readTokenAccount = async (provider: anchor.AnchorProvider, accountPublicKe
 
 const prereqs_setup_helper = async (provider: anchor.AnchorProvider, program: anchor.Program<DungeonNft>): Promise<State> => {
     let [beneficiarySigner, beneficiary] = await createUser(provider);
+    let [playerSigner, player] = await createUser(provider);
 
     const tokenMint = await spl.createMint(provider.connection, beneficiarySigner, beneficiary, beneficiary, NUM_OF_DECIMALS);
     const solMint = spl.NATIVE_MINT;
 
     let beneficiaryTokenAssociatedTokenAccount = await createUserAssociatedTokenAccount(provider, beneficiary, beneficiarySigner, tokenMint, beneficiary, beneficiarySigner);
-    let beneficiarySolAssociatedTokenAccount = await createUserAssociatedTokenAccount(provider, beneficiary, beneficiarySigner, solMint, beneficiary, beneficiarySigner);
+    let beneficiarySolAssociatedTokenAccount = await createUserAssociatedTokenAccount(provider, beneficiary, beneficiarySigner, solMint);
+
+    let playerTokenAssociatedTokenAccount = await createUserAssociatedTokenAccount(provider, player, playerSigner, tokenMint, beneficiary, beneficiarySigner);
+    let playerSolAssociatedTokenAccount = await createUserAssociatedTokenAccount(provider, player, playerSigner, solMint);
 
     let [marketState,] = await anchor.web3.PublicKey.findProgramAddress([anchor.utils.bytes.utf8.encode("market-state"), beneficiary.toBuffer()], program.programId);
 
@@ -100,10 +112,17 @@ const prereqs_setup_helper = async (provider: anchor.AnchorProvider, program: an
     return {
         tokenMint: tokenMint,
         solMint: solMint,
+
         beneficiary: beneficiary,
         beneficiarySigner: beneficiarySigner,
         beneficiaryTokenAssociatedTokenAccount: beneficiaryTokenAssociatedTokenAccount,
         beneficiarySolAssociatedTokenAccount: beneficiarySolAssociatedTokenAccount,
+
+        player: player,
+        playerSigner: playerSigner,
+        playerTokenAssociatedTokenAccount: playerTokenAssociatedTokenAccount,
+        playerSolAssociatedTokenAccount: playerSolAssociatedTokenAccount,
+
         marketState: marketState,
         tokenVault: tokenVault,
         solVault: solVault
@@ -111,7 +130,7 @@ const prereqs_setup_helper = async (provider: anchor.AnchorProvider, program: an
 }
 
 const initializeMarketHelper = async (state: State, program: anchor.Program<DungeonNft>): Promise<void> => {
-    let fee_num = new anchor.BN(1);
+    let fee_num = new anchor.BN(0);
     let fee_den = new anchor.BN(1000);
 
     const tx = await program.methods.ammSetupInstruction(fee_num, fee_den).accounts({
@@ -140,7 +159,7 @@ const addLiquidityHelper = async (state: State, provider: anchor.AnchorProvider,
     assert.equal(preAdditionBeneficiaryTokenATABalance, 100 * 10 ** NUM_OF_DECIMALS);
 
     const [, preAdditionBeneficiarySolATABalance] = await readTokenAccount(provider, state.beneficiarySolAssociatedTokenAccount);
-    assert.equal(preAdditionBeneficiarySolATABalance, 3 * anchor.web3.LAMPORTS_PER_SOL);
+    assert.equal(preAdditionBeneficiarySolATABalance, 5 * anchor.web3.LAMPORTS_PER_SOL);
 
     const tokenAmount = new anchor.BN(50 * 10 ** NUM_OF_DECIMALS);
     const solAmount = new anchor.BN(2 * anchor.web3.LAMPORTS_PER_SOL);
@@ -159,7 +178,7 @@ const addLiquidityHelper = async (state: State, provider: anchor.AnchorProvider,
     assert.equal(postAdditionBeneficiaryTokenATABalance, 50 * 10 ** NUM_OF_DECIMALS);
 
     const [, postAdditionBeneficiarySolATABalance] = await readTokenAccount(provider, state.beneficiarySolAssociatedTokenAccount);
-    assert.equal(postAdditionBeneficiarySolATABalance, 1 * anchor.web3.LAMPORTS_PER_SOL);
+    assert.equal(postAdditionBeneficiarySolATABalance, 3 * anchor.web3.LAMPORTS_PER_SOL);
 
     const [, postAdditionTokenVaultBalance] = await readTokenAccount(provider, state.tokenVault);
     assert.equal(postAdditionTokenVaultBalance, 50 * 10 ** NUM_OF_DECIMALS);
@@ -171,14 +190,87 @@ const addLiquidityHelper = async (state: State, provider: anchor.AnchorProvider,
     console.log(`Added Liquidity to the market with signature: ${tx}`);
 }
 
+const solToTokenHelper = async (state: State, provider: anchor.AnchorProvider, program: Program<DungeonNft>) => {
+    const [, preSwapPlayerTokenATABalance] = await readTokenAccount(provider, state.playerTokenAssociatedTokenAccount);
+    assert.equal(preSwapPlayerTokenATABalance, 100 * 10 ** NUM_OF_DECIMALS);
 
-describe("DungeonNFTAMMComplete", () => {
+    const [, preSwapPlayerSolATABalance] = await readTokenAccount(provider, state.playerSolAssociatedTokenAccount);
+    assert.equal(preSwapPlayerSolATABalance, 5 * anchor.web3.LAMPORTS_PER_SOL);
+
+    const amount_in = new anchor.BN(anchor.web3.LAMPORTS_PER_SOL);
+
+    const tx = await program.methods.swapTokensInstruction(amount_in, true).accounts({
+        marketState: state.marketState,
+        tokenVault: state.tokenVault,
+        solVault: state.solVault,
+        player: state.player,
+        beneficiary: state.beneficiary,
+        playerTokenAta: state.playerTokenAssociatedTokenAccount,
+        playerSolAta: state.playerSolAssociatedTokenAccount,
+        tokenProgram: spl.TOKEN_PROGRAM_ID
+    }).signers([state.playerSigner]).rpc();
+
+    const [, postSwapPlayerSolATABalance] = await readTokenAccount(provider, state.playerSolAssociatedTokenAccount);
+    assert.equal(postSwapPlayerSolATABalance, 4 * anchor.web3.LAMPORTS_PER_SOL);
+
+    const [, postSwapPlayerTokenATABalance] = await readTokenAccount(provider, state.playerTokenAssociatedTokenAccount);
+    assert.equal(postSwapPlayerTokenATABalance, 116666666667);
+
+    const [, postSwapSolVaultBalance] = await readTokenAccount(provider, state.solVault);
+    assert.equal(postSwapSolVaultBalance, 3 * anchor.web3.LAMPORTS_PER_SOL);
+
+    const [, postSwapTokenVaultBalance] = await readTokenAccount(provider, state.tokenVault);
+    assert.equal(postSwapTokenVaultBalance, 33333333333);
+
+    assert.ok(tx);
+    console.log(`Added Liquidity to the market with signature: ${tx}`);
+}
+
+const tokenToSolHelper = async (state: State, provider: anchor.AnchorProvider, program: Program<DungeonNft>) => {
+    const [, preSwapPlayerTokenATABalance] = await readTokenAccount(provider, state.playerTokenAssociatedTokenAccount);
+    assert.equal(preSwapPlayerTokenATABalance, 116666666667);
+
+    const [, preSwapPlayerSolATABalance] = await readTokenAccount(provider, state.playerSolAssociatedTokenAccount);
+    assert.equal(preSwapPlayerSolATABalance, 4 * anchor.web3.LAMPORTS_PER_SOL);
+
+    const amount_in = new anchor.BN(50 * 10 ** NUM_OF_DECIMALS);
+
+    const tx = await program.methods.swapTokensInstruction(amount_in, false).accounts({
+        marketState: state.marketState,
+        tokenVault: state.tokenVault,
+        solVault: state.solVault,
+        player: state.player,
+        beneficiary: state.beneficiary,
+        playerTokenAta: state.playerTokenAssociatedTokenAccount,
+        playerSolAta: state.playerSolAssociatedTokenAccount,
+        tokenProgram: spl.TOKEN_PROGRAM_ID
+    }).signers([state.playerSigner]).rpc();
+
+    const [, postSwapPlayerSolATABalance] = await readTokenAccount(provider, state.playerSolAssociatedTokenAccount);
+    assert.equal(postSwapPlayerSolATABalance, 5800000001);
+
+    const [, postSwapPlayerTokenATABalance] = await readTokenAccount(provider, state.playerTokenAssociatedTokenAccount);
+    assert.equal(postSwapPlayerTokenATABalance, 66666666667)
+
+    const [, postSwapSolVaultBalance] = await readTokenAccount(provider, state.solVault);
+    assert.equal(postSwapSolVaultBalance, 1199999999)
+
+    const [, postSwapTokenVaultBalance] = await readTokenAccount(provider, state.tokenVault);
+    assert.equal(postSwapTokenVaultBalance, 83333333333);
+
+    assert.ok(tx);
+    console.log(`Added Liquidity to the market with signature: ${tx}`);
+
+}
+
+
+describe("DungeonNFTAMMSolToToken", () => {
     const provider = anchor.AnchorProvider.env();
     anchor.setProvider(provider);
 
 
     const program = anchor.workspace.DungeonNft as Program<DungeonNft>;
-    //program.provider.connection.onLogs("all", ({ logs }) => { console.log(logs); });
+    // program.provider.connection.onLogs("all", ({ logs }) => { console.log(logs); });
 
     let state: State;
 
@@ -192,6 +284,11 @@ describe("DungeonNFTAMMComplete", () => {
 
     it('can add liquidity in the market pool', async () => {
         await addLiquidityHelper(state, provider, program);
+    })
+
+    it('can add swap sol to tokens', async () => {
+        await solToTokenHelper(state, provider, program);
+        await tokenToSolHelper(state, provider, program);
     })
 
 })

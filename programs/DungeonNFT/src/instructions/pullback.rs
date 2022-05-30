@@ -35,7 +35,7 @@ pub fn pull_back(ctx: Context<PullBack>) -> Result<()> {
             .player_associated_token_account
             .to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        Some(outer.as_ref()),
+        outer.as_ref(),
     )?;
 
     utils::secure_transfer_cpi(
@@ -46,7 +46,7 @@ pub fn pull_back(ctx: Context<PullBack>) -> Result<()> {
             .beneficiary_associated_token_account
             .to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        Some(outer.as_ref()),
+        outer.as_ref(),
     )?;
 
     utils::close_account_cpi(

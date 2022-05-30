@@ -31,7 +31,7 @@ pub fn transfer_to_winner(ctx: Context<TransferToWinner>, _winner: Pubkey) -> Re
             .winner_associated_token_account
             .to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        Some(outer.as_ref()),
+        outer.as_ref(),
     )?;
 
     utils::close_account_cpi(

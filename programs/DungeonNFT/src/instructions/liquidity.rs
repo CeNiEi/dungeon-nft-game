@@ -22,7 +22,7 @@ pub fn add_liquidity(
     if initial_liquidity_addition {
         sol_deposit_amount = sol_amount;
     } else {
-        let exchange_rate = curr_token_in_vault.checked_div(curr_sol_in_vault).unwrap();
+        let exchange_rate = curr_sol_in_vault.checked_div(curr_token_in_vault).unwrap();
         sol_deposit_amount = token_deposit_amount.checked_mul(exchange_rate).unwrap();
     }
 
@@ -35,13 +35,21 @@ pub fn add_liquidity(
         error::ErrorCode::NotEnoughBalance
     );
 
+    let state_bump_bytes = ctx.accounts.market_state.state_bump.to_le_bytes();
+    let inner = vec![
+        b"market-state".as_ref(),
+        ctx.accounts.beneficiary.key.as_ref(),
+        state_bump_bytes.as_ref()
+    ];
+    let outer = vec![inner.as_slice()];
+
     utils::secure_transfer_cpi(
         token_deposit_amount,
         ctx.accounts.beneficiary.to_account_info(),
         ctx.accounts.beneficiary_token_ata.to_account_info(),
         ctx.accounts.token_vault.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        None,
+        outer.as_ref(),
     )?;
 
     utils::secure_transfer_cpi(
@@ -50,7 +58,7 @@ pub fn add_liquidity(
         ctx.accounts.beneficiary_sol_ata.to_account_info(),
         ctx.accounts.sol_vault.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        None,
+        outer.as_ref(),
     )?;
 
     Ok(())
@@ -74,8 +82,6 @@ pub struct LiquidityOperation<'info> {
             beneficiary.key().as_ref()
         ], 
         bump = market_state.token_vault_bump,
-        token::mint = beneficiary_token_ata.mint,
-        token::authority = beneficiary
         )]
     pub token_vault: Account<'info, TokenAccount>,
 
@@ -86,8 +92,6 @@ pub struct LiquidityOperation<'info> {
             beneficiary.key().as_ref()
         ],
         bump = market_state.sol_vault_bump,
-        token::mint = beneficiary_sol_ata.mint, 
-        token::authority = beneficiary
         )]
     pub sol_vault: Account<'info, TokenAccount>,
 
