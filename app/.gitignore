@@ -1,8 +1,8 @@
-.DS_Store
 node_modules
-/build
-/.svelte-kit
-/package
+*.log*
+.nuxt
+.nitro
+.cache
+.output
 .env
-.env.*
-!.env.example
+dist
