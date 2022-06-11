@@ -1,0 +1,19 @@
+// app global css in SCSS form
+
+body {
+  background: $primary;
+  overflow: hidden;
+  perspective: 800px;
+}
+
+.custom-background {
+  background: $primary;
+  background: linear-gradient(180deg,
+      $primary 0%,
+      $secondary 100%);
+}
+
+.custom-background-hor {
+  background: rgb(20, 5, 5);
+  background: linear-gradient(90deg, $primary 0%, $secondary 100%);
+}

@@ -1,11 +1,18 @@
 <template>
-  <button class="btn">{{text}}</button>
+  <q-btn class="btn" :to="`${text}`">{{text}} </q-btn>
 </template>
 
 <style lang="scss" scoped>
-$color_1: #fff;
-$font-family_1: "Bebas Neue", sans-serif;
+$font-family_1: 'Bebas Neue', sans-serif;
 
+@keyframes skew {
+  1% {
+    transform: rotateX(10deg) skewX(90deg);
+  }
+  2% {
+    transform: rotateX(0deg) skewX(0deg);
+  }
+}
 @keyframes glitch {
   0% {
     clip-path: var(--slice-1);
@@ -60,7 +67,7 @@ $font-family_1: "Bebas Neue", sans-serif;
   font-family: $font-family_1;
   background: linear-gradient(45deg, transparent 5%, #ff013c 5%);
   border: 0;
-  color: $color_1;
+  color: white;
   letter-spacing: 3px;
   box-shadow: 6px 0px 0px #00e6f6;
   outline: transparent;
@@ -68,6 +75,7 @@ $font-family_1: "Bebas Neue", sans-serif;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+  animation: skew 5s 5s infinite;
   &:after {
     width: 150px;
     height: 76px;
@@ -76,7 +84,7 @@ $font-family_1: "Bebas Neue", sans-serif;
     font-family: $font-family_1;
     background: linear-gradient(45deg, transparent 5%, #ff013c 5%);
     border: 0;
-    color: $color_1;
+    color: white;
     letter-spacing: 3px;
     box-shadow: 6px 0px 0px #00e6f6;
     outline: transparent;
@@ -90,7 +98,7 @@ $font-family_1: "Bebas Neue", sans-serif;
     --slice-3: inset(10% -6px 85% 0);
     --slice-4: inset(40% -6px 43% 0);
     --slice-5: inset(80% -6px 5% 0);
-    content: "CeNiEi";
+    content: 'CeNiEi';
     display: block;
     position: absolute;
     top: 0;
@@ -128,8 +136,10 @@ $font-family_1: "Bebas Neue", sans-serif;
 }
 </style>
 
-<script setup lang="ts"> 
+<script setup lang="ts">
+import { computed } from 'vue';
+
 const props = defineProps<{
-  text: String, 
-}>()
+  text: string;
+}>();
 </script>

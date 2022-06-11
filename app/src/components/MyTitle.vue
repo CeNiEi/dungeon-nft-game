@@ -1,0 +1,89 @@
+<template>
+  <div>
+    <div>
+      <div class="container">
+        <div class="text-h1 glitch">TOKEN</div>
+        <div class="text-h1 glitch-before">TOKEN</div>
+        <div class="text-h1 glitch-after">TOKEN</div>
+      </div>
+      <div class="container">
+        <div class="glitch-before text-h1">HUNTER</div>
+        <div class="glitch text-h1">HUNTER</div>
+        <div class="glitch-after text-h1">HUNTER</div>
+      </div>
+    </div>
+    <div class="scanliness"></div>
+  </div>
+</template>
+
+<style lang="scss" scoped>
+@import url('https://fonts.googleapis.com/css?family=Oswald');
+
+.container {
+  font-family: 'Oswald', sans-serif;
+  font-style: italic;
+  position: relative;
+  text-align: center;
+}
+
+.glitch {
+  color: rgb(223, 191, 191);
+  position: relative;
+  animation: glitch 5s 5s infinite;
+}
+
+.glitch-before {
+  content: attr(data-text);
+  text-shadow: -5px 0 magenta;
+  position: absolute;
+  width: 100%;
+  background: $primary;
+  position: absolute;
+  overflow: hidden;
+  top: 0%;
+  animation: noise-1 3s linear infinite alternate-reverse,
+    glitch 5s 5s infinite;
+}
+
+.glitch-after {
+  content: attr(data-text);
+  text-shadow: -5px 0 lightgreen;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  background: $primary;
+  overflow: hidden;
+  animation: noise-2 3s linear infinite alternate-reverse, glitch 5s 5s infinite;
+}
+
+@keyframes glitch {
+  1% {
+    transform: rotateX(10deg) skewX(90deg);
+  }
+  2% {
+    transform: rotateX(0deg) skewX(0deg);
+  }
+}
+
+@keyframes noise-1 {
+  $steps: 30;
+  @for $i from 1 through $steps {
+    #{percentage($i*(1/$steps))} {
+      $top: random(100);
+      $bottom: random(101 - $top);
+      clip-path: inset(#{$top}px 0 #{$bottom}px 0);
+    }
+  }
+}
+
+@keyframes noise-2 {
+  $steps: 30;
+  @for $i from 0 through $steps {
+    #{percentage($i*(1/$steps))} {
+      $top: random(100);
+      $bottom: random(101 - $top);
+      clip-path: inset(#{$top}px 0 #{$bottom}px 0);
+    }
+  }
+}
+</style>
