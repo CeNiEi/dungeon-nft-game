@@ -1,5 +1,5 @@
 import { computed, ComputedRef, Ref } from 'vue'
-import { AnchorWallet, useAnchorWallet, useWallet } from 'solana-wallets-vue'
+import { AnchorWallet, useAnchorWallet } from 'solana-wallets-vue'
 import { Connection, PublicKey, SystemProgram } from '@solana/web3.js'
 import { AnchorProvider, Idl, Program, web3 } from '@project-serum/anchor'
 import idl from '../../../target/idl/dungeon_nft.json'
@@ -42,6 +42,10 @@ export const createCENIEI = async (provider: AnchorProvider, creator: web3.Publi
 
 export const initWorkspace = () => {
     const wallet = useAnchorWallet();
+
+    if (wallet.value === null) {
+        return;
+    }
 
     const connection = new Connection('http://127.0.0.1:8899')
     const provider = computed(() => new AnchorProvider(connection, wallet.value!, {}))

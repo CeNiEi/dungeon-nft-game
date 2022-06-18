@@ -1,6 +1,6 @@
 <template>
   <q-page>
-    <MyTitle :text="['TOKEN', 'HUNTER']"/>
+    <MyTitle class="text-h1" :text="['TOKEN','HUNTER']"/>
     <div class="row justify-evenly custom-pos">
       <MyButton :text="'Account'" />
       <MyButton :text="'Play'" />

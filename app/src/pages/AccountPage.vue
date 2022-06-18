@@ -1,13 +1,10 @@
 <template>
   <div class="text-white q-gutter-y-xl">
-    <MyTitle :text="['Current Balance']" />
-    <div class="row justify-evenly text-h6">
-      <div>
-        <p>Token -> 9999</p>
-      </div>
-      <div>
-        <p>Sol -> 99</p>
-      </div>
+    <MyTitle class="text-h1" :text="['Account Balance']" />
+
+    <div class="row justify-evenly">
+      <MyTitle class="text-h3 col-3" :text="['Wrapped SOL']"/>
+      <MyTitle class="text-h3 col-3" :text="['CENIEI']"/>
     </div>
     <!--div class="row justify-evenly text-h5">
       <div>
@@ -18,22 +15,23 @@
         <p>Token</p>
         <MyButton/>
       </div>
-    </div-->
+    </div>
     <div class="row justify-evenly text-h3">
-      <div>
+        <div>
         <p>Toggle Button</p>
         <MyButton />
-      </div>
-    </div>
+        </div>
+    </div-->
   </div>
 </template>
 
 <script setup lang="ts">
 import MyButton from 'components/MyButton.vue';
-import MyTitle from 'components/MyTitle.vue';
+import MyTitle from 'components/MyTitle.vue'
+import { useAccountStore } from '../stores/example-store';
 
-import { getATA } from '../api';
+const accountStore = useAccountStore();
+accountStore.setWrappedSolBalance();
 
-getATA(true);
-getATA(false);
+console.log(accountStore.getwrappedSolBalance);
 </script>

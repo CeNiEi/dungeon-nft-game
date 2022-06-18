@@ -1,14 +1,18 @@
 import { defineStore } from 'pinia';
+import { getATA } from 'src/api';
 
 export const useAccountStore = defineStore('userAccount', {
   state: () => ({
-    solBalance: 0, 
-    tokenBalance: 0
+    solBalance: BigInt(0),
+    tokenBalance: BigInt(0)
   }),
   getters: {
-    solBalance: (state) => state.solBalance,
-    tokenBalance: (state) => state.tokenBalance
+    getwrappedSolBalance: (state) => state.solBalance.toString(),
+    getCENIEIBalance: (state) => state.tokenBalance.toString()
   },
   actions: {
+    async setWrappedSolBalance() {
+      this.solBalance = await getATA(true);
+    }
   },
 });

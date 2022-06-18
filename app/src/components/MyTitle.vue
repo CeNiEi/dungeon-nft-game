@@ -1,16 +1,16 @@
 <template>
   <div>
-    <div class="container" v-for="(word, index) in text" :key="index">
-      <div class="text-h1 glitch">{{word}}</div>
-      <div class="text-h1 glitch-before">{{word}}</div>
-      <div class="text-h1 glitch-after">{{word}}</div>
+    <div class="container bg-white" v-for="(word, index) in text" :key="index">
+      <div class="glitch">{{word}}</div>
+      <div class="glitch-before">{{word}}</div>
+      <div class="glitch-after">{{word}}</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 defineProps<{
-  text: string
+  text: Array<string>
 }>();
 </script>
 
@@ -32,7 +32,7 @@ defineProps<{
 
 .glitch-before {
   content: attr(data-text);
-  text-shadow: -5px 0 magenta;
+  text-shadow: -0.5vw 0 magenta;
   position: absolute;
   width: 100%;
   background: $primary;
@@ -44,7 +44,7 @@ defineProps<{
 
 .glitch-after {
   content: attr(data-text);
-  text-shadow: -5px 0 lightgreen;
+  text-shadow: -0.5vw 0 lightgreen;
   position: absolute;
   top: 0;
   width: 100%;
