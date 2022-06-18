@@ -883,7 +883,7 @@
     animation: raise#{$i} 6 + random(15) + s linear infinite;
     animation-delay: random(5) - 5 + s;
     transform: scale(0.3 * $i - 0.6) rotate(random(360) + deg);
-    z-index: $i - 7;
+    z-index: $i;
     filter: blur($i - 6 + px);
     @keyframes raise#{$i} {
       to {

@@ -1,20 +1,18 @@
 <template>
   <div>
-    <div>
-      <div class="container">
-        <div class="text-h1 glitch">TOKEN</div>
-        <div class="text-h1 glitch-before">TOKEN</div>
-        <div class="text-h1 glitch-after">TOKEN</div>
-      </div>
-      <div class="container">
-        <div class="glitch-before text-h1">HUNTER</div>
-        <div class="glitch text-h1">HUNTER</div>
-        <div class="glitch-after text-h1">HUNTER</div>
-      </div>
+    <div class="container" v-for="(word, index) in text" :key="index">
+      <div class="text-h1 glitch">{{word}}</div>
+      <div class="text-h1 glitch-before">{{word}}</div>
+      <div class="text-h1 glitch-after">{{word}}</div>
     </div>
-    <div class="scanliness"></div>
   </div>
 </template>
+
+<script setup lang="ts">
+defineProps<{
+  text: string
+}>();
+</script>
 
 <style lang="scss" scoped>
 @import url('https://fonts.googleapis.com/css?family=Oswald');
@@ -41,8 +39,7 @@
   position: absolute;
   overflow: hidden;
   top: 0%;
-  animation: noise-1 3s linear infinite alternate-reverse,
-    glitch 5s 5s infinite;
+  animation: noise-1 3s linear infinite alternate-reverse, glitch 5s 5s infinite;
 }
 
 .glitch-after {

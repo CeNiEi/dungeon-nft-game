@@ -137,9 +137,7 @@ $font-family_1: 'Bebas Neue', sans-serif;
 </style>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-
-const props = defineProps<{
+defineProps<{
   text: string;
 }>();
 </script>
