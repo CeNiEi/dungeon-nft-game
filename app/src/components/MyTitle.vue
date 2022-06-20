@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="container bg-white" v-for="(word, index) in text" :key="index">
+    <div class="container" v-for="(word, index) in text" :key="index">
       <div class="glitch">{{word}}</div>
       <div class="glitch-before">{{word}}</div>
       <div class="glitch-after">{{word}}</div>
