@@ -1,8 +1,10 @@
 <template>
-  <q-btn class="btn" :to="`${text}`">{{text}} </q-btn>
+  <q-btn v-if="path" class="btn" :to="`${path}`"> {{ text }} </q-btn>
+  <q-btn v-else class="btn"> {{ text }} </q-btn>
 </template>
 
 <style lang="scss" scoped>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
 $font-family_1: 'Bebas Neue', sans-serif;
 
 @keyframes skew {
@@ -139,5 +141,6 @@ $font-family_1: 'Bebas Neue', sans-serif;
 <script setup lang="ts">
 defineProps<{
   text: string;
+  path?: string;
 }>();
 </script>

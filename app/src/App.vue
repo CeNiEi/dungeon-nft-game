@@ -4,9 +4,6 @@
       <template #default>
         <component :is="Component" :key="$route.path"></component>
       </template>
-      <template #fallback>
-        <MyTitle class="text-h1" :text="['Loading...']"/>
-      </template>
     </suspense>
   </router-view>
 </template>
@@ -15,8 +12,6 @@
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { initWallet } from 'solana-wallets-vue';
 import 'solana-wallets-vue/styles.css';
-import { onBeforeMount } from 'vue';
-import  MyTitle  from './components/MyTitle.vue';
 
 const walletOptions = {
   wallets: [new PhantomWalletAdapter()],

@@ -2,8 +2,8 @@
   <q-page>
     <MyTitle class="text-h1" :text="['TOKEN','HUNTER']"/>
     <div class="row justify-evenly custom-pos">
-      <MyButton :text="'Account'" />
-      <MyButton :text="'Play'" />
+      <MyButton :text="'Account'" :path="'Account'"/>
+      <MyButton :text="'Play'" :path="'Play'"/>
     </div>
   </q-page>
 </template>

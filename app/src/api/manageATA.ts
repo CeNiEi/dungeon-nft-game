@@ -35,12 +35,11 @@ export const createATA = async (sol: boolean): Promise<[string, string]> => {
   return [userATA.toBase58(), '0'];
 };
 
-export const fundWrappedSolATA = async (
-  user: web3.PublicKey,
-  amount: number,
-  provider: AnchorProvider,
-  userATA: web3.PublicKey
-): Promise<void> => {
+export const fundWrappedSolATA = async (amount: number): Promise<void> => {
+  const { provider } = useWorkspace();
+
+  const [user, userATA, ] = await findAtaDetails(true);
+
   const tx = new web3.Transaction().add(
     web3.SystemProgram.transfer({
       fromPubkey: user,
@@ -50,8 +49,8 @@ export const fundWrappedSolATA = async (
     createSyncNativeInstruction(userATA)
   );
 
-  const txSignature = await provider.sendAndConfirm(tx);
-  console.log(`Funded the ATA with ${amount} SOL: ${txSignature}`);
+  const txSignature = await provider.value.sendAndConfirm(tx);
+  console.log(`Funded the Wrapped Sol ATA with ${amount} SOL: ${txSignature}`);
 };
 
 const findAtaDetails = async (
@@ -71,7 +70,7 @@ const findAtaDetails = async (
 export const getATA = async (sol: boolean): Promise<[string, string]> => {
   const { wallet, provider } = useWorkspace();
   if (wallet.value === undefined) {
-      throw 'Wallet Undefined';
+    throw 'Wallet Undefined';
   }
 
   const tokenName = sol ? 'SOL' : 'CENIEI';
@@ -80,8 +79,8 @@ export const getATA = async (sol: boolean): Promise<[string, string]> => {
   const balanceRes = await fetchTokenAccountBalance(provider.value, userATA);
 
   if (balanceRes === null) {
-      console.log(`${tokenName} ATA does note exists`)
-      return ['', 'NULL'];
+    console.log(`${tokenName} ATA does note exists`);
+    return ['', 'X'];
   }
 
   console.log(`${tokenName} balance: ${balanceRes.toString()}`);
