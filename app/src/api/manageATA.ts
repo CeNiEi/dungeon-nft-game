@@ -1,12 +1,48 @@
-import { useWorkspace, CENIEI_MINT } from 'src/composables';
 import { AnchorProvider, web3 } from '@project-serum/anchor';
 import {
   AccountLayout,
   createAssociatedTokenAccountInstruction,
   createSyncNativeInstruction,
   getAssociatedTokenAddress,
+  createInitializeMintInstruction,
+  getMinimumBalanceForRentExemptMint,
+  MINT_SIZE,
+  TOKEN_PROGRAM_ID,
   NATIVE_MINT,
 } from '@solana/spl-token';
+import { useWorkspace } from 'src/composables';
+import { SystemProgram } from '@solana/web3.js';
+
+// ONLY FOR LOCALNET TESTING
+export const createCeniei = async (): Promise<web3.PublicKey> => {
+  const { provider, wallet } = useWorkspace();
+  const user = wallet.value?.publicKey;
+
+  if (user === undefined) {
+    throw 'Wallet Undefined';
+  }
+  const rentExemptLamports = await getMinimumBalanceForRentExemptMint(
+    provider.value.connection
+  );
+
+  const newMint = web3.Keypair.generate();
+
+  const tx = new web3.Transaction().add(
+    SystemProgram.createAccount({
+      fromPubkey: user,
+      newAccountPubkey: newMint.publicKey,
+      space: MINT_SIZE,
+      lamports: rentExemptLamports,
+      programId: TOKEN_PROGRAM_ID,
+    }),
+    createInitializeMintInstruction(newMint.publicKey, 9, user, user)
+  );
+
+  const txSignature = await provider.value.sendAndConfirm(tx, [newMint]);
+
+  console.log(`CENIEI created with signature: ${txSignature}`);
+  return newMint.publicKey;
+};
 
 export const fetchTokenAccountBalance = async (
   provider: AnchorProvider,
@@ -21,10 +57,12 @@ export const fetchTokenAccountBalance = async (
   return AccountLayout.decode(tokenInfoLol.data).amount;
 };
 
-export const createATA = async (sol: boolean): Promise<[string, string]> => {
+export const createATA = async (
+  mint: web3.PublicKey
+): Promise<[string, string]> => {
   const { provider } = useWorkspace();
 
-  const [user, userATA, mint] = await findAtaDetails(sol);
+  const [user, userATA] = await findAtaDetails(mint);
   const tx = new web3.Transaction().add(
     createAssociatedTokenAccountInstruction(user, userATA, user, mint)
   );
@@ -35,10 +73,11 @@ export const createATA = async (sol: boolean): Promise<[string, string]> => {
   return [userATA.toBase58(), '0'];
 };
 
+
 export const fundWrappedSolATA = async (amount: number): Promise<void> => {
   const { provider } = useWorkspace();
 
-  const [user, userATA, ] = await findAtaDetails(true);
+  const [user, userATA] = await findAtaDetails(NATIVE_MINT);
 
   const tx = new web3.Transaction().add(
     web3.SystemProgram.transfer({
@@ -53,9 +92,9 @@ export const fundWrappedSolATA = async (amount: number): Promise<void> => {
   console.log(`Funded the Wrapped Sol ATA with ${amount} SOL: ${txSignature}`);
 };
 
-const findAtaDetails = async (
-  sol: boolean
-): Promise<[web3.PublicKey, web3.PublicKey, web3.PublicKey]> => {
+export const findAtaDetails = async (
+  mint: web3.PublicKey
+): Promise<[web3.PublicKey, web3.PublicKey]> => {
   const { wallet } = useWorkspace();
   const user = wallet.value?.publicKey;
 
@@ -63,19 +102,20 @@ const findAtaDetails = async (
     throw 'Wallet Undefined';
   }
 
-  const mint = sol ? NATIVE_MINT : CENIEI_MINT;
-  return [user, await getAssociatedTokenAddress(mint, user), mint];
+  return [user, await getAssociatedTokenAddress(mint, user)];
 };
 
-export const getATA = async (sol: boolean): Promise<[string, string]> => {
+export const getATA = async (
+  mint: web3.PublicKey
+): Promise<[string, string]> => {
   const { wallet, provider } = useWorkspace();
   if (wallet.value === undefined) {
     throw 'Wallet Undefined';
   }
 
-  const tokenName = sol ? 'SOL' : 'CENIEI';
+  const tokenName = (mint === NATIVE_MINT) ? 'SOL' : 'CENIEI';
 
-  const [, userATA, ] = await findAtaDetails(sol);
+  const [, userATA] = await findAtaDetails(mint);
   const balanceRes = await fetchTokenAccountBalance(provider.value, userATA);
 
   if (balanceRes === null) {

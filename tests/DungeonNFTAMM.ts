@@ -223,7 +223,7 @@ const solToTokenHelper = async (state: State, provider: anchor.AnchorProvider, p
     assert.equal(postSwapTokenVaultBalance, 33333333333);
 
     assert.ok(tx);
-    console.log(`Added Liquidity to the market with signature: ${tx}`);
+    console.log(`Swapped Sol to Token with signature: ${tx}`);
 }
 
 const tokenToSolHelper = async (state: State, provider: anchor.AnchorProvider, program: Program<DungeonNft>) => {
@@ -259,7 +259,7 @@ const tokenToSolHelper = async (state: State, provider: anchor.AnchorProvider, p
     assert.equal(postSwapTokenVaultBalance, 83333333333);
 
     assert.ok(tx);
-    console.log(`Added Liquidity to the market with signature: ${tx}`);
+    console.log(`Swapped Token to Sol with signature: ${tx}`);
 
 }
 

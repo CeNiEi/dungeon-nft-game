@@ -1,5 +1,8 @@
+import { NATIVE_MINT } from '@solana/spl-token';
 import { defineStore } from 'pinia';
 import { getATA, createATA, fundWrappedSolATA } from 'src/api';
+import { useMarketStore } from './market-store';
+import { web3 } from '@project-serum/anchor';
 
 export const useAccountStore = defineStore('userAccount', {
   state: () => ({
@@ -16,30 +19,39 @@ export const useAccountStore = defineStore('userAccount', {
   },
   actions: {
     async setWrappedSolBalance() {
-      [this.solAccount, this.solBalance] = await getATA(true).catch((e) => {
-        throw e;
-      });
+      [this.solAccount, this.solBalance] = await getATA(NATIVE_MINT).catch(
+        (e) => {
+          throw e;
+        }
+      );
     },
     async setCenieiBalance() {
-      [this.cenieiAccount, this.cenieiBalance] = await getATA(false).catch(
-        (e) => {
-          throw e;
-        }
-      );
+      const marketStore = useMarketStore();
+      try {
+        const cenieiMint = new web3.PublicKey(marketStore.getCenieiMint);
+        [this.cenieiAccount, this.cenieiBalance] = await getATA(cenieiMint);
+      } catch (e) {
+        throw e;
+      }
     },
     async createWrappedSolAta() {
-      [this.solAccount, this.solBalance] = await createATA(true).catch((e) => {
-        throw e;
-      });
-    },
-    async createCenieiAta() {
-      [this.cenieiAccount, this.cenieiBalance] = await createATA(false).catch(
+      [this.solAccount, this.solBalance] = await createATA(NATIVE_MINT).catch(
         (e) => {
           throw e;
         }
       );
     },
+    async createCenieiAta() {
+      const marketStore = useMarketStore();
+      try {
+        const cenieiMint = new web3.PublicKey(marketStore.getCenieiMint);
+        [this.cenieiAccount, this.cenieiBalance] = await createATA(cenieiMint);
+      } catch (e) {
+        throw e;
+      }
+    },
     async fundWrappedSolATA() {
+      //CAN BE CHANGED
       const amount = 1;
       await fundWrappedSolATA(amount).catch((e) => {
         throw e;
