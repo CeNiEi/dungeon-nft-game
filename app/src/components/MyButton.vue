@@ -1,5 +1,5 @@
 <template>
-  <q-btn v-if="path" class="btn" :to="`${path}`"> {{ text }} </q-btn>
+  <q-btn v-if="path" class="btn" :to="`${path}`"> {{text }} </q-btn>
   <q-btn v-else class="btn"> {{ text }} </q-btn>
 </template>
 

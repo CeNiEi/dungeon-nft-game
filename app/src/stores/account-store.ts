@@ -6,16 +6,18 @@ import { web3 } from '@project-serum/anchor';
 
 export const useAccountStore = defineStore('userAccount', {
   state: () => ({
-    solAccount: '',
-    cenieiAccount: '',
+    solAccount: web3.PublicKey.default,
+    cenieiAccount: web3.PublicKey.default,
     solBalance: 'X',
     cenieiBalance: 'X',
   }),
   getters: {
     getWrappedSolBalance: (state) => state.solBalance,
-    getWrappedSolAccount: (state) => state.solAccount,
+    getWrappedSolAccount: (state) => state.solAccount.toBase58(),
+    getWrappedSolAccountRaw: (state) => state.solAccount,
     getCenieiBalance: (state) => state.cenieiBalance,
-    getCenieiAccount: (state) => state.cenieiAccount,
+    getCenieiAccount: (state) => state.cenieiAccount.toBase58(),
+    getCenieiAccountRaw: (state) => state.cenieiAccount,
   },
   actions: {
     async setWrappedSolBalance() {
@@ -28,7 +30,7 @@ export const useAccountStore = defineStore('userAccount', {
     async setCenieiBalance() {
       const marketStore = useMarketStore();
       try {
-        const cenieiMint = new web3.PublicKey(marketStore.getCenieiMint);
+        const cenieiMint = marketStore.getCenieiMint;
         [this.cenieiAccount, this.cenieiBalance] = await getATA(cenieiMint);
       } catch (e) {
         throw e;
@@ -44,7 +46,7 @@ export const useAccountStore = defineStore('userAccount', {
     async createCenieiAta() {
       const marketStore = useMarketStore();
       try {
-        const cenieiMint = new web3.PublicKey(marketStore.getCenieiMint);
+        const cenieiMint = marketStore.getCenieiMint;
         [this.cenieiAccount, this.cenieiBalance] = await createATA(cenieiMint);
       } catch (e) {
         throw e;
@@ -53,10 +55,9 @@ export const useAccountStore = defineStore('userAccount', {
     async fundWrappedSolATA() {
       //CAN BE CHANGED
       const amount = 1;
-      await fundWrappedSolATA(amount).catch((e) => {
+      this.solBalance = await fundWrappedSolATA(amount).catch((e) => {
         throw e;
       });
-      this.solBalance = amount.toString();
     },
   },
 });

@@ -4,62 +4,35 @@ import {
   createAssociatedTokenAccountInstruction,
   createSyncNativeInstruction,
   getAssociatedTokenAddress,
-  createInitializeMintInstruction,
-  getMinimumBalanceForRentExemptMint,
-  MINT_SIZE,
-  TOKEN_PROGRAM_ID,
   NATIVE_MINT,
 } from '@solana/spl-token';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { useWorkspace } from 'src/composables';
-import { SystemProgram } from '@solana/web3.js';
 
-// ONLY FOR LOCALNET TESTING
-export const createCeniei = async (): Promise<web3.PublicKey> => {
-  const { provider, wallet } = useWorkspace();
-  const user = wallet.value?.publicKey;
-
-  if (user === undefined) {
-    throw 'Wallet Undefined';
-  }
-  const rentExemptLamports = await getMinimumBalanceForRentExemptMint(
-    provider.value.connection
+export const checkIfInitializd = async (accountPublicKey: web3.PublicKey) => {
+  const { provider } = useWorkspace();
+  const tokenInfo = await provider.value.connection.getAccountInfo(
+    accountPublicKey
   );
 
-  const newMint = web3.Keypair.generate();
-
-  const tx = new web3.Transaction().add(
-    SystemProgram.createAccount({
-      fromPubkey: user,
-      newAccountPubkey: newMint.publicKey,
-      space: MINT_SIZE,
-      lamports: rentExemptLamports,
-      programId: TOKEN_PROGRAM_ID,
-    }),
-    createInitializeMintInstruction(newMint.publicKey, 9, user, user)
-  );
-
-  const txSignature = await provider.value.sendAndConfirm(tx, [newMint]);
-
-  console.log(`CENIEI created with signature: ${txSignature}`);
-  return newMint.publicKey;
+  return tokenInfo;
 };
 
 export const fetchTokenAccountBalance = async (
-  provider: AnchorProvider,
   accountPublicKey: web3.PublicKey
 ): Promise<bigint | null> => {
-  const tokenInfoLol = await provider.connection.getAccountInfo(
-    accountPublicKey
-  );
-  if (tokenInfoLol === null) {
+  const tokenInfo = await checkIfInitializd(accountPublicKey);
+
+  if (tokenInfo === null) {
     return null;
   }
-  return AccountLayout.decode(tokenInfoLol.data).amount;
+  const amount = AccountLayout.decode(tokenInfo.data).amount;
+  return amount / BigInt(LAMPORTS_PER_SOL);
 };
 
 export const createATA = async (
   mint: web3.PublicKey
-): Promise<[string, string]> => {
+): Promise<[web3.PublicKey, string]> => {
   const { provider } = useWorkspace();
 
   const [user, userATA] = await findAtaDetails(mint);
@@ -70,11 +43,10 @@ export const createATA = async (
   const txSignature = await provider.value.sendAndConfirm(tx);
   console.log(`Created a new ATA with signature: ${txSignature}`);
 
-  return [userATA.toBase58(), '0'];
+  return [userATA, '0'];
 };
 
-
-export const fundWrappedSolATA = async (amount: number): Promise<void> => {
+export const fundWrappedSolATA = async (amount: number): Promise<string> => {
   const { provider } = useWorkspace();
 
   const [user, userATA] = await findAtaDetails(NATIVE_MINT);
@@ -88,8 +60,12 @@ export const fundWrappedSolATA = async (amount: number): Promise<void> => {
     createSyncNativeInstruction(userATA)
   );
 
+
   const txSignature = await provider.value.sendAndConfirm(tx);
   console.log(`Funded the Wrapped Sol ATA with ${amount} SOL: ${txSignature}`);
+
+  const balanceRes = await fetchTokenAccountBalance(userATA);
+  return balanceRes!.toString();
 };
 
 export const findAtaDetails = async (
@@ -107,22 +83,22 @@ export const findAtaDetails = async (
 
 export const getATA = async (
   mint: web3.PublicKey
-): Promise<[string, string]> => {
-  const { wallet, provider } = useWorkspace();
+): Promise<[web3.PublicKey, string]> => {
+  const { wallet } = useWorkspace();
   if (wallet.value === undefined) {
     throw 'Wallet Undefined';
   }
 
-  const tokenName = (mint === NATIVE_MINT) ? 'SOL' : 'CENIEI';
+  const tokenName = mint === NATIVE_MINT ? 'SOL' : 'CENIEI';
 
   const [, userATA] = await findAtaDetails(mint);
-  const balanceRes = await fetchTokenAccountBalance(provider.value, userATA);
+  const balanceRes = await fetchTokenAccountBalance(userATA);
 
   if (balanceRes === null) {
     console.log(`${tokenName} ATA does note exists`);
-    return ['', 'X'];
+    return [web3.PublicKey.default, 'X'];
   }
 
   console.log(`${tokenName} balance: ${balanceRes.toString()}`);
-  return [userATA.toBase58(), balanceRes.toString()];
+  return [userATA, balanceRes.toString()];
 };

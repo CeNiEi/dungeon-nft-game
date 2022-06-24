@@ -20,3 +20,15 @@ const walletOptions = {
 
 initWallet(walletOptions);
 </script>
+
+<style lang="scss">
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+.loading-class {
+  font-family: 'Bebas Neue', sans-serif;
+  color: rgb(223, 191, 191);
+  font-size: xx-large;
+}
+.menu-font {
+  font-family: 'Bebas Neue', sans-serif;
+}
+</style>

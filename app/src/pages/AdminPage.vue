@@ -1,13 +1,12 @@
 <template>
   <div class="q-gutter-y-xl">
-    <MyTitle class="text-h1" :text="['Account Details']" />
-
+    <MyTitle class="text-h1" :text="['Manage Market']" />
     <div class="row justify-evenly" :style="{ cursor: 'pointer' }">
       <div
         class="col-3"
         :style="{ borderStyle: 'dotted', borderColor: 'pink' }"
       >
-        <MyTitle class="text-h3" :text="['Wrapped SOL', `${wrappedSol}`]" />
+        <MyTitle class="text-h3" :text="['SOL Vault', `${wrappedSol}`]" />
         <q-menu
           touch-position
           auto-close
@@ -32,7 +31,7 @@
         class="col-3"
         :style="{ borderStyle: 'dotted', borderColor: 'pink' }"
       >
-        <MyTitle class="text-h3 col-3" :text="['CENIEI', `${ceniei}`]" />
+        <MyTitle class="text-h3 col-3" :text="['CENIEI Vault', `${ceniei}`]" />
         <q-menu
           auto-close
           touch-position
@@ -54,41 +53,15 @@
         </q-menu>
       </div>
     </div>
-    <div class="row justify-evenly">
-      <div class="col-3">
-        <div v-if="wrappedSol === 'X'">
-          <MyButton :text="'New Account'" @click="createNewSolAccount" />
-        </div>
-        <div v-else>
-          <MyButton :text="'Fund Account'" @click="fundSolAccount" />
-        </div>
-      </div>
-      <div class="col-3">
-        <div v-if="ceniei === 'X'">
-          <MyButton :text="'New Account'" @click="createNewCenieiAccount" />
-        </div>
-        <div v-else>
-          <MyButton :text="'Get CENIEI'" />
-        </div>
-      </div>
-    </div>
 
-    <!--div class="row justify-evenly text-h5">
-      <div>
-        <p>SOL</p>
-        <MyButton/>
-      </div>
-      <div>
-        <p>Token</p>
-        <MyButton/>
-      </div>
+    <div class="row justify-evenly">
+      <MyButton :text="'Create CENIEI'" @click="createMint" />
+      <MyButton :text="'Get CENIEI'" @click="fundCeniei" />
     </div>
-    <div class="row justify-evenly text-h3">
-        <div>
-        <p>Toggle Button</p>
-        <MyButton />
-        </div>
-    </div-->
+    <div class="row justify-evenly">
+      <MyButton :text="'Create Market'" @click="createMarket" />
+      <MyButton :text="'Add Liquidity'" @click="addLiquidity" />
+    </div>
   </div>
 </template>
 
@@ -96,11 +69,11 @@
 import MyButton from 'components/MyButton.vue';
 import MyTitle from 'components/MyTitle.vue';
 import { ref } from 'vue';
+import { useMarketStore } from '../stores/market-store';
 import { useAccountStore } from '../stores/account-store';
 import { useQuasar, QSpinnerHourglass } from 'quasar';
 
 const $q = useQuasar();
-
 const showLoading = () => {
   $q.loading.show({
     spinner: QSpinnerHourglass,
@@ -114,80 +87,52 @@ const hideLoading = () => {
   $q.loading.hide();
 };
 
+const marketStore = useMarketStore();
 const accountStore = useAccountStore();
 
-const wrappedSol = ref(accountStore.getWrappedSolBalance);
-const ceniei = ref(accountStore.getCenieiBalance);
+const wrappedSol = ref(marketStore.getSolVaultBalance);
+const ceniei = ref(marketStore.getCenieiVaultBalance);
 
-if (wrappedSol.value === 'X') {
+const createMint = async () => {
   showLoading();
-  try {
-    await accountStore.setWrappedSolBalance();
-    wrappedSol.value = accountStore.getWrappedSolBalance;
-  } catch (e) {
-    console.log(e);
-  }
+  await marketStore.createCenieiMint().catch((e) => console.log(e));
   hideLoading();
-}
+};
 
-if (ceniei.value === 'X') {
+const fundCeniei = async () => {
   showLoading();
   try {
+    await marketStore.mintCeniei();
     await accountStore.setCenieiBalance();
-    ceniei.value = accountStore.getCenieiBalance;
-  } catch (e) {
-    console.log(e);
-  }
-  hideLoading();
-}
-
-// MAKE SURE TO CHECK IF THE ACCOUNT EXISTS BEFORE CREATING IT
-// IN CASE THE WALLET TRANSACTION FAILS
-const createNewSolAccount = async () => {
-  showLoading();
-  try {
-    await accountStore.setWrappedSolBalance();
-    if (accountStore.getWrappedSolBalance == 'X') {
-      await accountStore.createWrappedSolAta();
-    }
-    wrappedSol.value = accountStore.getWrappedSolBalance;
   } catch (e) {
     console.log(e);
   }
   hideLoading();
 };
 
-// MAKE SURE TO CHECK IF THE ACCOUNT EXISTS BEFORE CREATING IT
-// IN CASE THE WALLET TRANSACTION FAILS
-const createNewCenieiAccount = async () => {
+const createMarket = async () => {
   showLoading();
   try {
+    await marketStore.createMarket();
+    ceniei.value = marketStore.getCenieiVaultBalance;
+    wrappedSol.value = marketStore.getSolVaultBalance;
+  } catch (e) {
+    console.log(e);
+  }
+  hideLoading();
+};
+
+const addLiquidity = async () => {
+  showLoading();
+  try {
+    await marketStore.addLiquidity();
     await accountStore.setCenieiBalance();
-    if (accountStore.getCenieiBalance == 'X') {
-      await accountStore.createCenieiAta();
-    }
-    ceniei.value = accountStore.getCenieiBalance;
+    await accountStore.setWrappedSolBalance();
+    ceniei.value = marketStore.getCenieiVaultBalance;
+    wrappedSol.value = marketStore.getSolVaultBalance;
   } catch (e) {
     console.log(e);
   }
   hideLoading();
-};
-
-const fundSolAccount = async () => {
-  showLoading();
-  try {
-    await accountStore.fundWrappedSolATA();
-    wrappedSol.value = accountStore.getWrappedSolBalance;
-  } catch (e) {
-    console.log(e);
-  }
-  hideLoading();
-};
-
-const copyAccount = (sol: boolean) => {
-  const text = sol
-    ? accountStore.getWrappedSolAccount
-    : accountStore.getCenieiAccount;
-  navigator.clipboard.writeText(text);
 };
 </script>

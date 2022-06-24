@@ -17,7 +17,7 @@ let workspace: Workspace;
 
 export const useWorkspace = () => workspace;
 
-export const initWorkspace = async () => {
+export const initWorkspace = () => {
   const wallet = useAnchorWallet();
 
   if (wallet.value === undefined) {

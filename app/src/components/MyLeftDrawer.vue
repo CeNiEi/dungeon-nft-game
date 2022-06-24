@@ -1,4 +1,5 @@
 <template>
+  <MyButton :text="'Admin'" :path="'Admin'" />
   <div class="absolute-bottom">
     <WalletMultiButton />
   </div>
@@ -6,6 +7,13 @@
 
 <script setup lang="ts">
 import { WalletMultiButton } from 'solana-wallets-vue';
+import MyButton from './MyButton.vue';
+
+//import { useAccountStore } from '../stores/account-store.ts';
+//import { useMarketStore } from '../stores/market-store.ts';
+//
+//const accountStore = useAccountStore();
+//const marketStore = useMarketStore();
 </script>
 
 <style lang="scss">

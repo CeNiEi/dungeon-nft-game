@@ -16,7 +16,6 @@ pub mod dungeon_nft {
     // !!!!!!!!!!!!!!
     // NEED TO CHANGE THE TRANSACTION SETUP
     // ONLY THE PLAYER NEEDS TO BE A SIGNER SEED
-    // TRANSFER TO WINNER NEEDS TO BE MERGED WITH DEPOIST BY BOTH PARTIES
     pub fn transaction_setup_instruction(ctx: Context<TransactionSetup>) -> Result<()> {
         transaction_setup::transaction_setup(ctx)
     }
