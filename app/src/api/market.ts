@@ -9,7 +9,7 @@ import {
 } from '@solana/spl-token';
 import { useWorkspace } from 'src/composables';
 import { findAtaDetails } from '.';
-import { SystemProgram } from '@solana/web3.js';
+import { PublicKey, SystemProgram } from '@solana/web3.js';
 import { fetchTokenAccountBalance } from './manageATA';
 
 // ONLY FOR LOCALNET TESTING / ADMIN
@@ -47,7 +47,9 @@ export const createCeniei = async (
 
   const txSignature = await provider.value.sendAndConfirm(tx, [newMint]);
 
+  console.log(`CENIEI: ${newMint.publicKey}`);
   console.log(`CENIEI created with signature: ${txSignature}`);
+
   return newMint.publicKey;
 };
 
@@ -72,11 +74,10 @@ export const mintCeniei = async (
   const tx = new web3.Transaction().add(
     createMintToInstruction(cenieiMint, cenieiATA, user, 10000 * 10 ** 9)
   );
-
+  const txHash = await provider.value.sendAndConfirm(tx);
   console.log(
-    `Successfully funded Admin ATA with 10000 CENIEI with signature: ${tx}`
+    `Successfully funded Admin ATA with 10000 CENIEI with signature: ${txHash}`
   );
-  await provider.value.sendAndConfirm(tx);
 };
 
 // ONLY AVAILABLE IF THE CURRENT WALLET IS THE BENEFICIARY
@@ -117,7 +118,7 @@ export const setupMarketPrereqs = async (
     program.value.programId
   );
 
-  console.log(`Successfully initialized all the prerquesites`);
+  console.log('Successfully initialized all the prerquesites');
   return [marketState, cenieiVault, solVault];
 };
 
@@ -129,7 +130,6 @@ export const initializeMarket = async (
   solVault: web3.PublicKey,
   beneficiary: string
 ): Promise<[string, string]> => {
-
   const { program, wallet } = useWorkspace();
   const user = wallet.value?.publicKey;
 
@@ -210,7 +210,6 @@ export const addLiquidity = async (
   const solVaultBalance = await fetchTokenAccountBalance(solVault);
   const cenieiVaultBalance = await fetchTokenAccountBalance(cenieiVault);
   return [solVaultBalance!.toString(), cenieiVaultBalance!.toString()];
-
 };
 
 export const convertCurrency = async (
@@ -232,7 +231,7 @@ export const convertCurrency = async (
   const [, userSolATA] = await findAtaDetails(NATIVE_MINT);
   const [, userCenieiATA] = await findAtaDetails(cenieiMint);
 
-  const tx = await program.value.methods
+  const txHash = await program.value.methods
     .swapTokensInstruction(amount, solToToken)
     .accounts({
       marketState: marketState,
@@ -247,6 +246,6 @@ export const convertCurrency = async (
     .rpc();
 
   solToToken
-    ? console.log(`Swapped Sol To Token with tx: ${tx}`)
-    : console.log(`Swapped Token to Sol with tx: ${tx}`);
+    ? console.log(`Swapped Sol To Token with txHash: ${txHash}`)
+    : console.log(`Swapped Token to Sol with txHash: ${txHash}`);
 };

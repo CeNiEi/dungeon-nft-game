@@ -59,8 +59,9 @@
         <div v-if="wrappedSol === 'X'">
           <MyButton :text="'New Account'" @click="createNewSolAccount" />
         </div>
-        <div v-else>
+        <div v-else class="q-gutter-y-md">
           <MyButton :text="'Fund Account'" @click="fundSolAccount" />
+          <MyButton :text="'Convert To CENIEI'" />
         </div>
       </div>
       <div class="col-3">
@@ -68,7 +69,7 @@
           <MyButton :text="'New Account'" @click="createNewCenieiAccount" />
         </div>
         <div v-else>
-          <MyButton :text="'Get CENIEI'" />
+          <MyButton :text="'Convert To SOL'" />
         </div>
       </div>
     </div>
@@ -147,7 +148,7 @@ const createNewSolAccount = async () => {
   showLoading();
   try {
     await accountStore.setWrappedSolBalance();
-    if (accountStore.getWrappedSolBalance == 'X') {
+    if (accountStore.getWrappedSolBalance === 'X') {
       await accountStore.createWrappedSolAta();
     }
     wrappedSol.value = accountStore.getWrappedSolBalance;
@@ -163,7 +164,7 @@ const createNewCenieiAccount = async () => {
   showLoading();
   try {
     await accountStore.setCenieiBalance();
-    if (accountStore.getCenieiBalance == 'X') {
+    if (accountStore.getCenieiBalance === 'X') {
       await accountStore.createCenieiAta();
     }
     ceniei.value = accountStore.getCenieiBalance;

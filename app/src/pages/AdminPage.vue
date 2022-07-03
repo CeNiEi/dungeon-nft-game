@@ -55,12 +55,11 @@
     </div>
 
     <div class="row justify-evenly">
-      <MyButton :text="'Create CENIEI'" @click="createMint" />
       <MyButton :text="'Get CENIEI'" @click="fundCeniei" />
+      <MyButton :text="'Add Liquidity'" @click="addLiquidity" />
     </div>
     <div class="row justify-evenly">
-      <MyButton :text="'Create Market'" @click="createMarket" />
-      <MyButton :text="'Add Liquidity'" @click="addLiquidity" />
+      <MyButton :text="'COMPLETE SETUP'" @click="setup" />
     </div>
   </div>
 </template>
@@ -93,9 +92,30 @@ const accountStore = useAccountStore();
 const wrappedSol = ref(marketStore.getSolVaultBalance);
 const ceniei = ref(marketStore.getCenieiVaultBalance);
 
-const createMint = async () => {
+const setup = async () => {
   showLoading();
-  await marketStore.createCenieiMint().catch((e) => console.log(e));
+  try {
+    await marketStore.createCenieiMint();
+    await accountStore.setWrappedSolBalance();
+    if (accountStore.getWrappedSolBalance === 'X') {
+      await accountStore.createWrappedSolAta();
+    }
+    await accountStore.setCenieiBalance();
+    if (accountStore.getCenieiBalance === 'X') {
+      await accountStore.createCenieiAta();
+    }
+    await accountStore.fundWrappedSolATA();
+    await marketStore.mintCeniei();
+
+    await marketStore.createMarket();
+
+    await accountStore.setWrappedSolBalance();
+    await accountStore.setCenieiBalance();
+    ceniei.value = marketStore.getCenieiVaultBalance;
+    wrappedSol.value = marketStore.getSolVaultBalance;
+  } catch (e) {
+    console.log(e);
+  }
   hideLoading();
 };
 
@@ -104,18 +124,6 @@ const fundCeniei = async () => {
   try {
     await marketStore.mintCeniei();
     await accountStore.setCenieiBalance();
-  } catch (e) {
-    console.log(e);
-  }
-  hideLoading();
-};
-
-const createMarket = async () => {
-  showLoading();
-  try {
-    await marketStore.createMarket();
-    ceniei.value = marketStore.getCenieiVaultBalance;
-    wrappedSol.value = marketStore.getSolVaultBalance;
   } catch (e) {
     console.log(e);
   }

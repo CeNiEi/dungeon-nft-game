@@ -12,6 +12,7 @@
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { initWallet } from 'solana-wallets-vue';
 import 'solana-wallets-vue/styles.css';
+import { initWorkspace } from './composables';
 
 const walletOptions = {
   wallets: [new PhantomWalletAdapter()],
@@ -19,6 +20,8 @@ const walletOptions = {
 };
 
 initWallet(walletOptions);
+initWorkspace();
+
 </script>
 
 <style lang="scss">

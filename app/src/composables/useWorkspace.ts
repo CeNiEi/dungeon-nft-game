@@ -1,7 +1,7 @@
 import { computed, ComputedRef, Ref } from 'vue';
 import { AnchorWallet, useAnchorWallet } from 'solana-wallets-vue';
-import { Connection, PublicKey, SystemProgram } from '@solana/web3.js';
-import { AnchorProvider, Idl, Program, web3 } from '@project-serum/anchor';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { AnchorProvider, Idl, Program } from '@project-serum/anchor';
 import idl from '../../../target/idl/dungeon_nft.json';
 
 const programID = new PublicKey(idl.metadata.address);
@@ -19,10 +19,6 @@ export const useWorkspace = () => workspace;
 
 export const initWorkspace = () => {
   const wallet = useAnchorWallet();
-
-  if (wallet.value === undefined) {
-    return;
-  }
 
   const connection = new Connection('http://127.0.0.1:8899');
   const provider = computed(

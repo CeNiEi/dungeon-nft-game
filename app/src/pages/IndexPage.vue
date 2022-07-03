@@ -11,9 +11,6 @@
 <script setup lang="ts">
 import MyButton from 'components/MyButton.vue';
 import MyTitle from 'components/MyTitle.vue';
-import { initWorkspace } from '../composables';
-
-initWorkspace();
 </script>
 
 <style lang="scss" scoped>
