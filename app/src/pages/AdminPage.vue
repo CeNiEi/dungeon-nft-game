@@ -96,21 +96,20 @@ const setup = async () => {
   showLoading();
   try {
     await marketStore.createCenieiMint();
-    await accountStore.setWrappedSolBalance();
-    if (accountStore.getWrappedSolBalance === 'X') {
-      await accountStore.createWrappedSolAta();
-    }
-    await accountStore.setCenieiBalance();
-    if (accountStore.getCenieiBalance === 'X') {
-      await accountStore.createCenieiAta();
-    }
+
+    await accountStore.createWrappedSolAta();
+    await accountStore.createCenieiAta();
+
     await accountStore.fundWrappedSolATA();
     await marketStore.mintCeniei();
 
     await marketStore.createMarket();
 
+    await marketStore.addLiquidity();
+
     await accountStore.setWrappedSolBalance();
     await accountStore.setCenieiBalance();
+
     ceniei.value = marketStore.getCenieiVaultBalance;
     wrappedSol.value = marketStore.getSolVaultBalance;
   } catch (e) {

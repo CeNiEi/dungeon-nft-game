@@ -214,7 +214,7 @@ export const addLiquidity = async (
 
 export const convertCurrency = async (
   solToToken: boolean,
-  amount: bigint,
+  amount: BN,
   cenieiMint: web3.PublicKey,
   marketState: web3.PublicKey,
   cenieiVault: web3.PublicKey,
@@ -248,4 +248,9 @@ export const convertCurrency = async (
   solToToken
     ? console.log(`Swapped Sol To Token with txHash: ${txHash}`)
     : console.log(`Swapped Token to Sol with txHash: ${txHash}`);
+
+  const solVaultBalance = await fetchTokenAccountBalance(solVault);
+  const cenieiVaultBalance = await fetchTokenAccountBalance(cenieiVault);
+  return [solVaultBalance!.toString(), cenieiVaultBalance!.toString()];
+
 };

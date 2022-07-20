@@ -1,5 +1,6 @@
 import { web3 } from '@project-serum/anchor';
 import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
+import { BN } from 'bn.js';
 import { defineStore } from 'pinia';
 import {
   addLiquidity,
@@ -53,7 +54,7 @@ export const useMarketStore = defineStore('market', {
         await setupMarketPrereqs(this.beneficiary).catch((e) => {
           throw e;
         });
-      
+
       [this.solVaultBalance, this.cenieiVaultBalance] = await initializeMarket(
         this.cenieiMint,
         this.marketState,
@@ -78,8 +79,8 @@ export const useMarketStore = defineStore('market', {
     },
 
     async convertSolToCeniei() {
-      const lamports = BigInt(0.1 * LAMPORTS_PER_SOL);
-      await convertCurrency(
+      const lamports = new BN(0.1 * LAMPORTS_PER_SOL);
+      [this.solVaultBalance, this.cenieiVaultBalance] = await convertCurrency(
         true,
         lamports,
         this.cenieiMint,
@@ -92,8 +93,12 @@ export const useMarketStore = defineStore('market', {
       });
     },
 
-    async convertCenieiToSol(amount: bigint) {
-      await convertCurrency(
+    async convertCenieiToSol(full: boolean) {
+      const accountStore = useAccountStore();
+      const amount = full
+        ? new BN(accountStore.getCenieiBalance)
+        : new BN(accountStore.getCenieiBalance).div(new BN(2));
+      [this.solVaultBalance, this.cenieiVaultBalance] = await convertCurrency(
         false,
         amount,
         this.cenieiMint,

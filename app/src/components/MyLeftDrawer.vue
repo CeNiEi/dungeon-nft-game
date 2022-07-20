@@ -1,5 +1,26 @@
 <template>
-  <MyButton :text="'Admin'" :path="'Admin'" />
+  <q-list bordered separator class="text-h3 text-white my-list q-gutter-y-md">
+    <q-item
+      clickable
+      :to="{ name: 'Home' }"
+      active-class="my-active-class"
+      :active="$route.name === 'Home'"
+    >
+      <q-item-section>Home</q-item-section>
+    </q-item>
+
+    <q-item clickable :to="'Account'" active-class="my-active-class">
+      <q-item-section>Account</q-item-section>
+    </q-item>
+
+    <q-item clickable>
+      <q-item-section>Play</q-item-section>
+    </q-item>
+
+    <q-item clickable :to="'Admin'" active-class="my-active-class">
+      <q-item-section>Admin</q-item-section>
+    </q-item>
+  </q-list>
   <div class="absolute-bottom">
     <WalletMultiButton />
   </div>
@@ -8,13 +29,20 @@
 <script setup lang="ts">
 import { WalletMultiButton } from 'solana-wallets-vue';
 import MyButton from './MyButton.vue';
-
-//import { useAccountStore } from '../stores/account-store.ts';
-//import { useMarketStore } from '../stores/market-store.ts';
-//
-//const accountStore = useAccountStore();
-//const marketStore = useMarketStore();
 </script>
+
+<style lang="scss" scoped>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+$font-family_1: 'Bebas Neue', sans-serif;
+
+.my-list {
+  font-family: $font-family_1;
+}
+
+.my-active-class {
+  color: #ff013c;
+}
+</style>
 
 <style lang="scss">
 .swv-dropdown {
