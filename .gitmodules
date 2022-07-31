@@ -1,0 +1,6 @@
+[submodule "app/--force"]
+	path = app/--force
+	url = git@github.com:CeNiEi/YetAnotherDungeonCrawler.git
+[submodule "app/YetAnotherDungeonCrawler"]
+	path = app/YetAnotherDungeonCrawler
+	url = git@github.com:CeNiEi/YetAnotherDungeonCrawler.git

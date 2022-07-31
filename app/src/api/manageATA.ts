@@ -9,7 +9,6 @@ import {
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { useWorkspace } from 'src/composables';
 
-
 export const checkIfInitializd = async (accountPublicKey: web3.PublicKey) => {
   const { provider } = useWorkspace();
   const tokenInfo = await provider.value.connection.getAccountInfo(
@@ -19,19 +18,17 @@ export const checkIfInitializd = async (accountPublicKey: web3.PublicKey) => {
   return tokenInfo;
 };
 
-
 export const fetchTokenAccountBalance = async (
   accountPublicKey: web3.PublicKey
-): Promise<bigint | null> => {
+): Promise<number | null> => {
   const tokenInfo = await checkIfInitializd(accountPublicKey);
 
   if (tokenInfo === null) {
     return null;
   }
   const amount = AccountLayout.decode(tokenInfo.data).amount;
-  return amount / BigInt(LAMPORTS_PER_SOL);
+  return Number((amount * 100n) / BigInt(LAMPORTS_PER_SOL)) / 100;
 };
-
 
 export const createATA = async (
   mint: web3.PublicKey
@@ -48,7 +45,6 @@ export const createATA = async (
 
   return [userATA, '0'];
 };
-
 
 export const fundWrappedSolATA = async (amount: number): Promise<string> => {
   const { provider } = useWorkspace();
@@ -71,7 +67,6 @@ export const fundWrappedSolATA = async (amount: number): Promise<string> => {
   return balanceRes!.toString();
 };
 
-
 export const findAtaDetails = async (
   mint: web3.PublicKey
 ): Promise<[web3.PublicKey, web3.PublicKey]> => {
@@ -84,7 +79,6 @@ export const findAtaDetails = async (
 
   return [user, await getAssociatedTokenAddress(mint, user)];
 };
-
 
 export const getATA = async (
   mint: web3.PublicKey

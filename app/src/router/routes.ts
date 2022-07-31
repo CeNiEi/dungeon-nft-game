@@ -20,6 +20,16 @@ const routes: RouteRecordRaw[] = [
         path: 'admin',
         component: () => import('pages/AdminPage.vue'),
       },
+      {
+        name: 'Game',
+        path: 'game',
+        component: () => import('pages/GamePage.vue'),
+      },
+      {
+        name: 'Enter',
+        path: 'enter',
+        component: () => import('pages/EnterPage.vue'),
+      },
     ],
   },
 

@@ -252,5 +252,4 @@ export const convertCurrency = async (
   const solVaultBalance = await fetchTokenAccountBalance(solVault);
   const cenieiVaultBalance = await fetchTokenAccountBalance(cenieiVault);
   return [solVaultBalance!.toString(), cenieiVaultBalance!.toString()];
-
 };
